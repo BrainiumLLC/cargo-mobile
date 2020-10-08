@@ -13,7 +13,59 @@ use crate::{
 };
 use thiserror::Error;
 
-static PACKAGES: &'static [&'static str] = &["xcodegen", "ios-deploy"];
+static PACKAGES: &[Package] = &[
+    Package::from_name("xcodegen"),
+    Package::from_name("ios-deploy"),
+    Package::from_name_and_tap("zld", "michaeleisel/zld"),
+];
+
+#[derive(Clone, Copy, Debug)]
+struct Package {
+    name: &'static str,
+    tap: Option<&'static str>,
+}
+
+impl Package {
+    const fn from_name(name: &'static str) -> Self {
+        Self { name, tap: None }
+    }
+
+    const fn from_name_and_tap(name: &'static str, tap: &'static str) -> Self {
+        Self { name, tap: Some(tap) }
+    }
+
+    fn present(&self) -> Result<bool, Error> {
+        let present = util::command_present(self.name)
+            .map_err(|source| Error::PresenceCheckFailed { package: self.name, source })?;
+        log::info!("`{}` command {}", self.name, if present { "present" } else { "absent" });
+        Ok(present)
+    }
+
+    fn install(&self) -> Result<(), Error> {
+        println!("Installing `{}`...", self.name);
+        if let Some(tap) = self.tap {
+            bossy::Command::impure_parse("brew tap")
+                .with_arg(tap)
+                .run_and_wait()
+                .map_err(|source| Error::TapFailed { tap, source })?;
+        }
+        // reinstall works even if it's not installed yet, and will upgrade
+        // if it's already installed!
+        bossy::Command::impure_parse("brew reinstall")
+            .with_arg(self.name)
+            .run_and_wait()
+            .map_err(|source| Error::InstallFailed { package: self.name, source })?;
+        Ok(())
+    }
+
+    fn upgrade(&self) -> Result<(), Error> {
+        bossy::Command::impure_parse("brew upgrade")
+            .with_arg(self.name)
+            .run_and_wait()
+            .map_err(|source| Error::InstallFailed { package: self.name, source })?;
+        Ok(())
+    }
+}
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -22,6 +74,11 @@ pub enum Error {
     #[error("Failed to check for presence of `{package}`: {source}")]
     PresenceCheckFailed {
         package: &'static str,
+        source: bossy::Error,
+    },
+    #[error("Failed to tap `{tap}`: {source}")]
+    TapFailed {
+        tap: &'static str,
         source: bossy::Error,
     },
     #[error("Failed to install `{package}`: {source}")]
@@ -40,20 +97,15 @@ pub fn install(
     non_interactive: opts::NonInteractive,
     skip_dev_tools: opts::SkipDevTools,
     reinstall_deps: opts::ReinstallDeps,
+    host_rustflags: &mut Vec<String>,
 ) -> Result<(), Error> {
     for package in PACKAGES {
-        let found = util::command_present(package)
-            .map_err(|source| Error::PresenceCheckFailed { package, source })?;
-        if !found || reinstall_deps.yes() {
-            println!("Installing `{}`...", package);
-            // reinstall works even if it's not installed yet, and will upgrade
-            // if it's already installed!
-            bossy::Command::impure_parse("brew reinstall")
-                .with_arg(package)
-                .run_and_wait()
-                .map_err(|source| Error::InstallFailed { package, source })?;
+        if !package.present()? || reinstall_deps.yes() {
+            package.install()?;
         }
     }
+    // Speed up linking substantially on macOS
+    host_rustflags.push("-Clink-arg=-fuse-ld=/usr/local/bin/zld".to_owned());
     let outdated = Outdated::load()?;
     outdated.print_notice();
     if !outdated.is_empty() && non_interactive.no() {
@@ -67,10 +119,7 @@ pub fn install(
         };
         if answer.yes() {
             for package in outdated.iter() {
-                bossy::Command::impure_parse("brew upgrade")
-                    .with_arg(package)
-                    .run_and_wait()
-                    .map_err(|source| Error::InstallFailed { package, source })?;
+                package.upgrade()?;
             }
         }
     }

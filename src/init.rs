@@ -155,9 +155,9 @@ pub fn exec(
     //
     // This behavior could be explained here:
     // https://doc.rust-lang.org/cargo/reference/config.html#buildrustflags
-    dot_cargo.set_default_target(
-        util::host_target_triple().map_err(Error::HostTargetTripleDetectionFailed)?,
-    );
+    let host_target_triple = util::host_target_triple().map_err(Error::HostTargetTripleDetectionFailed)?;
+    dot_cargo.set_default_target(&host_target_triple);
+    let mut host_rustflags = vec!["-Ctarget-cpu=native".to_owned()];
 
     let metadata = Metadata::load(&config.app().root_dir()).map_err(Error::MetadataFailed)?;
 
@@ -173,6 +173,7 @@ pub fn exec(
             skip_dev_tools,
             reinstall_deps,
             &filter,
+            &mut host_rustflags,
         )
         .map_err(Error::AppleInitFailed)?;
     } else {
@@ -200,6 +201,10 @@ pub fn exec(
         println!("Skipping Android init, since it's marked as unsupported in your Cargo.toml metadata");
     }
 
+    dot_cargo.insert_target(host_target_triple, dot_cargo::DotCargoTarget {
+        rustflags: host_rustflags,
+        ..Default::default()
+    });
     dot_cargo
         .write(config.app())
         .map_err(Error::DotCargoWriteFailed)?;

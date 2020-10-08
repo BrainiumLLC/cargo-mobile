@@ -55,12 +55,13 @@ pub fn gen(
     skip_dev_tools: opts::SkipDevTools,
     reinstall_deps: opts::ReinstallDeps,
     filter: &templating::Filter,
+    host_rustflags: &mut Vec<String>,
 ) -> Result<(), Error> {
     println!("Installing iOS toolchains...");
     Target::install_all().map_err(Error::RustupFailed)?;
     rust_version_check(wrapper).map_err(Error::RustVersionCheckFailed)?;
 
-    deps::install(wrapper, non_interactive, skip_dev_tools, reinstall_deps)
+    deps::install(wrapper, non_interactive, skip_dev_tools, reinstall_deps, host_rustflags)
         .map_err(Error::DepsInstallFailed)?;
 
     let dest = config.project_dir();

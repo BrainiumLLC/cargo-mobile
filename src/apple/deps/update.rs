@@ -1,4 +1,4 @@
-use super::PACKAGES;
+use super::{Package, PACKAGES};
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -38,7 +38,7 @@ impl Formula {
 }
 
 #[derive(Debug)]
-pub struct Outdated {
+pub(super) struct Outdated {
     packages: Vec<Formula>,
 }
 
@@ -56,18 +56,18 @@ impl Outdated {
             .map(|Raw { formulae }| Self {
                 packages: formulae
                     .into_iter()
-                    .filter(|formula| PACKAGES.contains(&formula.name.as_str()))
+                    .filter(|formula| PACKAGES.iter().any(|pkg| pkg.name == formula.name.as_str()))
                     .collect(),
             })
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &'static str> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = Package> + '_ {
         self.packages.iter().map(|formula| {
             PACKAGES
                 .iter()
                 // Do a switcheroo to get static lifetimes, just for the dubious
                 // goal of not needing to use `String` in `deps::Error`...
-                .find(|package| **package == formula.name.as_str())
+                .find(|package| package.name == formula.name.as_str())
                 .copied()
                 .expect("developer error: outdated package list should be a subset of `PACKAGES`")
         })
