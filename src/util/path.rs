@@ -1,10 +1,14 @@
 use path_abs::PathAbs;
+use path_slash::PathExt;
 use std::{
     fmt::{self, Display},
     io,
     path::{Path, PathBuf},
 };
 use thiserror::Error;
+
+#[cfg(target_os = "windows")]
+use path_slash::PathBufExt;
 
 #[derive(Debug, Error)]
 #[error("Failed to get user's home directory!")]
@@ -70,6 +74,33 @@ pub fn unprefix_path(
         })
 }
 
+/// If `path` is a [DOS device path](https://docs.microsoft.com/en-us/dotnet/standard/io/file-path-formats#dos-device-paths) `dedos_maybe` returns a new path with the "\\\\?\\" prefix trimmed otherwise it is an identity function.
+/// Calls `path.to_str()` internally and in case that is a `None` or `path` does not have the prefix it just returns a new `PathBuf` from `path`.
+fn dedos_maybe(path: &Path) -> PathBuf {
+    match path.to_str() {
+        Some(s) => match s.strip_prefix("\\\\?\\") {
+            Some(t) => PathBuf::from(t),
+            None => path.to_path_buf(),
+        },
+        None => path.to_path_buf(),
+    }
+}
+
+/// If `path` contains any `\\` they will be replaced with `/`.
+/// Calls `path.to_slash()` internally and in case that is a `None` it just returns `path.to_path_buf()`.
+fn slash_maybe(path: &Path) -> PathBuf {
+    match path.to_slash() {
+        Some(s) => PathBuf::from(s),
+        None => path.to_path_buf(),
+    }
+}
+
+/// Composes `slash_maybe` and `dedos_maybe`.
+/// So far, the sanest approach to tackling Windows path specification horrors...
+pub fn unwin_maybe(path: &Path) -> PathBuf {
+    slash_maybe(&dedos_maybe(path))
+}
+
 fn common_root(abs_src: &Path, abs_dest: &Path) -> PathBuf {
     let mut dest_root = abs_dest.to_owned();
     loop {
@@ -84,6 +115,7 @@ fn common_root(abs_src: &Path, abs_dest: &Path) -> PathBuf {
 }
 
 /// Transforms `abs_path` to be relative to `abs_relative_to`.
+#[cfg(not(target_os = "windows"))]
 pub fn relativize_path(abs_path: impl AsRef<Path>, abs_relative_to: impl AsRef<Path>) -> PathBuf {
     let (abs_path, abs_relative_to) = (abs_path.as_ref(), abs_relative_to.as_ref());
     assert!(abs_path.is_absolute());
@@ -99,6 +131,40 @@ pub fn relativize_path(abs_path: impl AsRef<Path>, abs_relative_to: impl AsRef<P
         rel_path.push("..");
     }
     let rel_path = rel_path.join(path);
+    log::info!(
+        "{:?} relative to {:?} is {:?}",
+        abs_path,
+        abs_relative_to,
+        rel_path
+    );
+    rel_path
+}
+
+/// Transforms `abs_path` to be relative to `abs_relative_to`.
+#[cfg(target_os = "windows")]
+pub fn relativize_path(abs_path: impl AsRef<Path>, abs_relative_to: impl AsRef<Path>) -> PathBuf {
+    let (abs_path, abs_relative_to) = (abs_path.as_ref(), abs_relative_to.as_ref());
+    assert!(abs_path.is_absolute());
+    assert!(abs_relative_to.is_absolute());
+    let (path, relative_to) = {
+        let common_root = common_root(abs_path, abs_relative_to);
+        let path = abs_path.strip_prefix(&common_root).unwrap();
+        let relative_to = abs_relative_to.strip_prefix(&common_root).unwrap();
+        (path, relative_to)
+    };
+    let mut rel_path = PathBuf::new();
+    // NOTE
+    //   the original loop
+    //     for _ in 0..relative_to.iter().count() { rel_path.push(".."); }
+    //   is pushing 1 excess ".." on my windows wormhole
+    // FIX
+    //   now substracting path component count
+    for _ in 0..relative_to.iter().count() - path.iter().count() {
+        rel_path.push("..");
+    }
+    // NOTE to_slash() changes \\ 2 / ...
+    // ...required 4 rootDirRel in build.bradle.kts (ya on windows)
+    let rel_path = PathBuf::from(rel_path.join(path).to_slash().unwrap());
     log::info!(
         "{:?} relative to {:?} is {:?}",
         abs_path,

@@ -154,7 +154,7 @@ impl Config {
                 if project_dir == DEFAULT_PROJECT_DIR {
                     log::warn!("`{}.project-dir` is set to the default value; you can remove it from your config", super::NAME);
                 }
-                if util::under_root(&project_dir, app.root_dir())
+                if util::under_root(&project_dir, &app.root_dir())
                     .map_err(|cause| Error::ProjectDirInvalid(ProjectDirInvalid::NormalizationFailed {
                         project_dir: project_dir.clone(),
                         cause,
@@ -164,7 +164,7 @@ impl Config {
                 } else {
                     Err(Error::ProjectDirInvalid(ProjectDirInvalid::OutsideOfAppRoot {
                         project_dir,
-                        root_dir: app.root_dir().to_owned(),
+                        root_dir: app.root_dir(),
                     }))
                 }
             }).unwrap_or_else(|| {

@@ -15,8 +15,13 @@ use crate::{
 };
 use std::fmt::{self, Display};
 
+#[cfg(not(target_os = "windows"))]
+const GRADLEW: &str = "gradlew";
+#[cfg(target_os = "windows")]
+const GRADLEW: &str = "gradlew.bat";
+
 fn gradlew(config: &Config, env: &Env) -> bossy::Command {
-    let gradlew_path = config.project_dir().join("gradlew");
+    let gradlew_path = config.project_dir().join(GRADLEW);
     bossy::Command::pure(&gradlew_path)
         .with_env_vars(env.explicit_env())
         .with_arg("--project-dir")
@@ -170,7 +175,7 @@ impl<'a> Device<'a> {
         ));
         self.adb(env)
             .with_arg("install")
-            .with_arg(apk_path)
+            .with_arg(&apk_path)
             .run_and_wait()
             .map_err(ApkInstallError::InstallFailed)?;
         Ok(())

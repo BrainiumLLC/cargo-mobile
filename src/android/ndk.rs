@@ -1,5 +1,8 @@
 use super::target::Target;
-use crate::util::cli::{Report, Reportable};
+use crate::util::{
+    self,
+    cli::{Report, Reportable},
+};
 use once_cell_regex::regex_multi_line;
 use std::{
     collections::HashSet,
@@ -36,6 +39,12 @@ pub fn host_tag() -> &'static str {
     "windows-x86_64"
 }
 
+#[cfg(not(target_os = "windows"))]
+const READELF: &str = "readelf";
+
+#[cfg(target_os = "windows")]
+const READELF: &str = "readelf.exe";
+
 #[derive(Clone, Copy, Debug)]
 pub enum Compiler {
     Clang,
@@ -45,8 +54,14 @@ pub enum Compiler {
 impl Compiler {
     fn as_str(&self) -> &'static str {
         match self {
+            #[cfg(not(target_os = "windows"))]
             Compiler::Clang => "clang",
+            #[cfg(target_os = "windows")]
+            Compiler::Clang => "clang.cmd",
+            #[cfg(not(target_os = "windows"))]
             Compiler::Clangxx => "clang++",
+            #[cfg(target_os = "windows")]
+            Compiler::Clangxx => "clang++.cmd",
         }
     }
 }
@@ -61,8 +76,14 @@ pub enum Binutil {
 impl Binutil {
     fn as_str(&self) -> &'static str {
         match self {
+            #[cfg(not(target_os = "windows"))]
             Binutil::Ar => "ar",
+            #[cfg(not(target_os = "windows"))]
             Binutil::Ld => "ld",
+            #[cfg(target_os = "windows")]
+            Binutil::Ar => "ar.exe",
+            #[cfg(target_os = "windows")]
+            Binutil::Ld => "ld.exe",
         }
     }
 }
@@ -308,15 +329,21 @@ impl Env {
 
     pub fn prebuilt_dir(&self) -> Result<PathBuf, MissingToolError> {
         MissingToolError::check_dir(
-            self.ndk_home
-                .join(format!("toolchains/llvm/prebuilt/{}", host_tag())),
+            util::path::unwin_maybe(
+                &self
+                    .ndk_home
+                    .join(format!("toolchains/llvm/prebuilt/{}", host_tag())),
+            ),
             // TODO: shove this square peg into a squarer hole
             "prebuilt toolchain",
         )
     }
 
     pub fn tool_dir(&self) -> Result<PathBuf, MissingToolError> {
-        MissingToolError::check_dir(self.prebuilt_dir()?.join("bin"), "tools")
+        MissingToolError::check_dir(
+            util::path::unwin_maybe(&self.prebuilt_dir()?.join("bin")),
+            "tools",
+        )
     }
 
     pub fn compiler_path(
@@ -326,8 +353,12 @@ impl Env {
         min_api: u32,
     ) -> Result<PathBuf, MissingToolError> {
         MissingToolError::check_file(
-            self.tool_dir()?
-                .join(format!("{}{}-{}", triple, min_api, compiler.as_str())),
+            util::path::unwin_maybe(&self.tool_dir()?.join(format!(
+                "{}{}-{}",
+                triple,
+                min_api,
+                compiler.as_str()
+            ))),
             compiler.as_str(),
         )
     }
@@ -357,8 +388,8 @@ impl Env {
 
     fn readelf_path(&self, triple: &str) -> Result<PathBuf, MissingToolError> {
         MissingToolError::check_file(
-            self.tool_dir()?.join(format!("{}-readelf", triple)),
-            "readelf",
+            self.tool_dir()?.join(format!("{}-{}", triple, READELF)),
+            READELF,
         )
     }
 

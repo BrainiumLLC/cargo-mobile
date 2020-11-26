@@ -37,6 +37,14 @@ Whenever you want to update:
 cargo mobile update
 ```
 
+### Windows
+
+We need to tell `cargo` to not install the `cargo-apple` binary on Windows.
+
+``` sh
+cargo install --git https://github.com/BrainiumLLC/cargo-mobile --bin cargo-mobile --bin cargo-android
+```
+
 ## Usage
 
 To start a new project, all you need to do is make a directory with a cute name, `cd` into it, and then run this command:
@@ -44,6 +52,8 @@ To start a new project, all you need to do is make a directory with a cute name,
 ```bash
 cargo mobile init
 ```
+
+> Windows: requires `Admin cmd.exe` otherwise symlinking fails :DD :/
 
 After some straightforward prompts, you'll be asked to select a template pack. Template packs are used to generate project boilerplate, i.e. using the `bevy` template pack gives you a minimal [Bevy](https://bevyengine.org/) project that runs out-of-the-box on desktop and mobile.
 

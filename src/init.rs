@@ -134,8 +134,7 @@ pub fn exec(
     if skip_dev_tools.no()
         && util::command_present("code").map_err(Error::CodeCommandPresentFailed)?
     {
-        let mut command = bossy::Command::impure("code")
-            .with_args(&["--install-extension", "vadimcn.vscode-lldb"]);
+        let mut command = util::cmd_code_install_lldb();
         if non_interactive.yes() {
             command.add_arg("--force");
         }

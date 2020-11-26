@@ -1,5 +1,7 @@
 use std::{
     fmt::{self, Display},
+    fs,
+    os::windows,
     path::{Path, PathBuf},
 };
 
@@ -53,7 +55,10 @@ impl Display for TargetStyle {
 #[derive(Debug)]
 pub enum ErrorCause {
     MissingFileName,
+    #[cfg(not(target_os = "windows"))]
     CommandFailed(bossy::Error),
+    #[cfg(target_os = "windows")]
+    CommandFailed(std::io::Error),
 }
 
 impl Display for ErrorCause {
@@ -62,7 +67,7 @@ impl Display for ErrorCause {
             Self::MissingFileName => {
                 write!(f, "Neither the source nor target contained a file name.",)
             }
-            Self::CommandFailed(err) => write!(f, "`ln` command failed: {}", err),
+            Self::CommandFailed(err) => write!(f, "Creating a link failed: {:?}", err),
         }
     }
 }
@@ -127,6 +132,7 @@ impl<'a> Call<'a> {
         })
     }
 
+    #[cfg(not(target_os = "windows"))]
     pub fn exec(self) -> Result<(), Error> {
         let mut command = bossy::Command::impure("ln");
         command.add_arg("-h"); // don't follow symlinks
@@ -141,7 +147,7 @@ impl<'a> Call<'a> {
                 command.add_arg("-F");
             }
             _ => (),
-        }
+        };
         // For the target to be interpreted as a directory, it must end in a
         // trailing slash. We can't append one using `join` or `push`, since it
         // would be interpreted as an absolute path and result in the target
@@ -171,6 +177,53 @@ impl<'a> Call<'a> {
             target_style: self.target_style,
             cause: ErrorCause::CommandFailed(err),
         })?;
+        Ok(())
+    }
+
+    #[cfg(target_os = "windows")]
+    pub fn exec(self) -> Result<(), Error> {
+        // NOTE: on Windows symlinking fails if the target already exists.
+        // Better than that: creating links requires admin on Windows
+        let from_io_error = |err| Error {
+            link_type: self.link_type,
+            force: self.force,
+            source: self.source.to_owned(),
+            target: self.target.to_owned(),
+            target_style: self.target_style,
+            cause: ErrorCause::CommandFailed(err),
+        };
+        match self.link_type {
+            LinkType::Symbolic => {
+                if self.target.is_dir() {
+                    if self.target.exists() {
+                        fs::remove_dir_all(&self.target).map_err(from_io_error)?;
+                    }
+                    log::debug!(
+                        "attempting windows::fs::symlink_dir({:?}, {:?})",
+                        &self.source,
+                        &self.target
+                    );
+                    windows::fs::symlink_dir(self.source, self.target)
+                } else {
+                    if self.target.exists() {
+                        fs::remove_file(&self.target).map_err(from_io_error)?;
+                    }
+                    log::debug!(
+                        "attempting windows::fs::symlink_file({:?}, {:?})",
+                        &self.source,
+                        &self.target
+                    );
+                    windows::fs::symlink_file(self.source, self.target)
+                }
+            }
+            LinkType::Hard => {
+                if self.target.exists() {
+                    fs::remove_file(&self.target).map_err(from_io_error)?;
+                }
+                fs::hard_link(self.source, self.target)
+            }
+        }
+        .map_err(from_io_error)?;
         Ok(())
     }
 }

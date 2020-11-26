@@ -150,7 +150,7 @@ impl Config {
                     super::NAME
                 );
             }
-            if util::under_root(&project_dir, app.root_dir()).map_err(|cause| {
+            if util::under_root(&project_dir, &app.root_dir()).map_err(|cause| {
                 Error::ProjectDirInvalid(ProjectDirInvalid::NormalizationFailed {
                     project_dir: project_dir.clone(),
                     cause,
@@ -167,7 +167,7 @@ impl Config {
                 Err(Error::ProjectDirInvalid(
                     ProjectDirInvalid::OutsideOfAppRoot {
                         project_dir,
-                        root_dir: app.root_dir().to_owned(),
+                        root_dir: app.root_dir(),
                     },
                 ))
             }
@@ -201,9 +201,12 @@ impl Config {
     }
 
     pub fn project_dir(&self) -> PathBuf {
-        self.app
-            .prefix_path(&self.project_dir)
-            .join(self.app().name())
+        util::path::unwin_maybe(
+            &self
+                .app
+                .prefix_path(&self.project_dir)
+                .join(self.app().name()),
+        )
     }
 
     pub fn project_dir_exists(&self) -> bool {

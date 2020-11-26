@@ -1,6 +1,6 @@
 [package]
 name = "cargo-mobile"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Brainium Studios LLC", "Francesca Lovebloom <francesca@brainiumstudios.com>"]
 edition = "2018"
 description = "Rust on mobile made easy!"
@@ -52,6 +52,9 @@ openssl = "0.10.28"
 objc = "0.2.7"
 objc_id = "0.1.1"
 serde_json = "1.0.50"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+path-slash = "0.1.3"
 
 [build-dependencies]
 bicycle = { git = "https://github.com/BrainiumLLC/bicycle", rev = "28080e0c6fa4067d9dd1b0f2b7322b6b32178e1f" }

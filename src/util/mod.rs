@@ -2,7 +2,7 @@ mod cargo;
 pub mod cli;
 mod git;
 pub mod ln;
-mod path;
+pub mod path;
 pub mod prompt;
 
 pub use self::{cargo::*, git::*, path::*};
@@ -211,9 +211,17 @@ pub fn prepend_to_path(path: impl Display, base_path: impl Display) -> String {
     format!("{}:{}", path, base_path)
 }
 
+#[cfg(not(target_os = "windows"))]
 pub fn command_path(name: &str) -> bossy::Result<bossy::Output> {
     bossy::Command::impure("command")
         .with_args(&["-v", name])
+        .run_and_wait_for_output()
+}
+
+#[cfg(target_os = "windows")]
+pub fn command_path(name: &str) -> bossy::Result<bossy::Output> {
+    bossy::Command::impure("where.exe")
+        .with_arg(name)
         .run_and_wait_for_output()
 }
 
@@ -225,6 +233,21 @@ pub fn command_present(name: &str) -> bossy::Result<bool> {
             Err(err)
         }
     })
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn cmd_code_install_lldb() -> bossy::Command {
+    bossy::Command::impure("code").with_args(&["--install-extension", "vadimcn.vscode-lldb"])
+}
+
+#[cfg(target_os = "windows")]
+pub fn cmd_code_install_lldb() -> bossy::Command {
+    bossy::Command::impure("cmd.exe").with_args(&[
+        "/c",
+        "code.cmd",
+        "--install-extension",
+        "vadimcn.vscode-lldb",
+    ])
 }
 
 #[derive(Debug)]

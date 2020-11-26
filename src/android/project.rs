@@ -84,11 +84,14 @@ pub fn gen(
     )
     .map_err(Error::TemplateProcessingFailed)?;
 
-    let dest = dest.join("app/src/main/assets/");
-    fs::create_dir_all(&dest).map_err(|cause| Error::DirectoryCreationFailed {
-        path: dest.clone(),
-        cause,
-    })?;
+    let dest = &util::path::unwin_maybe(&dest.join("app/src/main/assets/"));
+    // NOTE on windows fs::create_dir_all fails if the target already exists
+    if !dest.exists() {
+        fs::create_dir_all(&dest).map_err(|cause| Error::DirectoryCreationFailed {
+            path: dest.clone(),
+            cause,
+        })?;
+    }
     ln::force_symlink_relative(config.app().asset_dir(), dest, ln::TargetStyle::Directory)
         .map_err(Error::AssetDirSymlinkFailed)?;
 

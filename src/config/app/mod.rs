@@ -158,8 +158,8 @@ impl App {
         })
     }
 
-    pub fn root_dir(&self) -> &Path {
-        &self.root_dir
+    pub fn root_dir(&self) -> PathBuf {
+        util::path::unwin_maybe(&self.root_dir)
     }
 
     pub fn prefix_path(&self, path: impl AsRef<Path>) -> PathBuf {
@@ -197,7 +197,7 @@ impl App {
     }
 
     pub fn asset_dir(&self) -> PathBuf {
-        self.root_dir().join(&self.asset_dir)
+        util::path::unwin_maybe(&self.root_dir().join(&self.asset_dir))
     }
 
     pub fn template_pack(&self) -> &Pack {
