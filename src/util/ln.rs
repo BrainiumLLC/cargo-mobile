@@ -129,7 +129,17 @@ impl<'a> Call<'a> {
 
     pub fn exec(self) -> Result<(), Error> {
         let mut command = bossy::Command::impure("ln");
+
+        #[cfg(target_os = "macos")]
         command.add_arg("-h"); // don't follow symlinks
+
+        // (--no-dereference), the same, I guess, it says: "treat destination that is a
+        // symlink to a directory as if it were a normal file".
+        // https://linux.die.net/man/1/ln
+        // The -h option is not present on the linux manual, so we use this one.
+        #[cfg(target_os = "linux")]
+        command.add_arg("-n");
+
         if let LinkType::Symbolic = self.link_type {
             command.add_arg("-s");
         }
