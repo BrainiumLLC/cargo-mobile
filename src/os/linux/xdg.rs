@@ -1,10 +1,12 @@
-use std::{
-    path::{Path, PathBuf},
-    env,
-};
 use freedesktop_entry_parser::Entry as FreeDesktopEntry;
 use freedesktop_entry_parser::parse_entry;
-use regex::*;
+use once_cell_regex::exports::regex::bytes::Regex;
+use std::{
+    env,
+    ffi::{OsStr, OsString},
+    os::unix::ffi::OsStrExt,
+    path::{Path, PathBuf},
+};
 
 // Detects which .desktop file contains the data on how to handle a given
 // mime type (like: "with which program do I open a text/rust file?")
@@ -48,17 +50,17 @@ pub fn find_entry_in_dir(dir_path: &Path, target: &Path) -> Option<PathBuf> {
 
 // Creates a command from the path to a freedesktop "Desktop Entry" file.
 // These kind of files are generally named "something.desktop"
-pub fn command_from_freedesktop_entry(entry: &Path) -> Option<String> {
+pub fn command_from_freedesktop_entry(entry: &Path) -> Option<OsString> {
     let parsed = parse_entry(entry).ok()?;
 
-    let exec_command = parsed.section("Desktop Entry")
+    let exec_command: OsString = parsed.section("Desktop Entry")
         .attr("Exec")?
         .into();
 
     Some(exec_command)
 }
 
-pub fn find_entry_by_app_name(dir_path: &Path, app_name: &str) -> Option<FreeDesktopEntry> {
+pub fn find_entry_by_app_name(dir_path: &Path, app_name: &OsStr) -> Option<FreeDesktopEntry> {
     for entry in dir_path.read_dir().ok()? {
         if let Ok(entry) = entry {
             // If it is a file we open it
@@ -84,17 +86,34 @@ pub fn find_entry_by_app_name(dir_path: &Path, app_name: &str) -> Option<FreeDes
 // The exec field of the FreeDesktop entry may contain some flags that need to
 // be replaced by parameters or even other stuff. The other things are still
 // not implemented
-pub fn build_command(command: &str, argument: &str) -> Option<String> {
-    let mut command = command.to_string();
+pub fn build_command(command: &OsStr, argument: &OsStr) -> OsString {
+    let mut command = command.to_os_string();
+    let arg_re = Regex::new(r"%u|%U|%f|%F").unwrap();
 
-    let arg_re = regex!(r"%u|%U|%f|%F");
-    while let Some(mat) = arg_re.find(&command) {
+    while let Some(mat) = arg_re.find(command.as_bytes()) {
         let start = mat.start();
         let end = mat.end();
-        command.replace_range(start..end, argument);
+
+        let range_length = end - start;
+        let argument_length = argument.as_bytes().len();
+        let prev_length = command.as_bytes().len();
+        // This won't underflow because the regex length can be only as bit as the
+        // string length itself. And after that we add stuff.
+        let new_length = (prev_length - range_length) + argument_length;
+
+        // This should avoid realocations on push
+        let mut new_command = OsString::with_capacity(new_length);
+
+        // This is a simple `replace_range` substitute, start and end
+        // being the match range we want to replace.
+        new_command.push(OsStr::from_bytes(&command.as_bytes()[..start]));
+        new_command.push(argument);
+        new_command.push(OsStr::from_bytes(&command.as_bytes()[end..]));
+
+        command = new_command;
     }
 
-    Some(command)
+    command
 }
 
 // Returns a vector of all the relevant xdg desktop application entries

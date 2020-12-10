@@ -1,7 +1,7 @@
 mod xdg;
 
 use std::{
-    ffi::OsStr,
+    ffi::{OsStr, OsString},
     fmt::{self, Display},
     path::Path,
 };
@@ -21,20 +21,20 @@ impl Display for DetectEditorError {
 
 #[derive(Debug)]
 pub enum OpenFileError {
-    LaunchFailed,
+    LaunchFailed(bossy::Error),
 }
 
 impl Display for OpenFileError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::LaunchFailed => write!(f, "Launch failed"),
+            Self::LaunchFailed(e) => write!(f, "Launch failed: {}", e),
         }
     }
 }
 
 #[derive(Debug)]
 pub struct Application {
-    exec_command: String,
+    exec_command: OsString,
 }
 
 impl Application {
@@ -67,20 +67,15 @@ impl Application {
 
     pub fn open_file(&self, path: impl AsRef<Path>) -> Result<(), OpenFileError> {
         let path = path.as_ref();
-        let path_str = path.to_string_lossy(); // Ugh, lossy
 
-        let command = xdg::build_command(&self.exec_command, &path_str)
-            .ok_or(OpenFileError::LaunchFailed)?;
+        let command = xdg::build_command(&self.exec_command, path.as_os_str());
 
         // I'm having a problem creating a dettached process with bossy,
         // but this should work and be well supported on linux systems,
         // as "sh" and no "nohup" are pretty standard.
-        bossy::Command::impure("sh")
-            .add_args(&["-c", &format!("nohup {} > /dev/null &", command)])
-            .set_stdout(bossy::Stdio::null())
-            .set_stderr(bossy::Stdio::null())
-            .run_and_wait()
-            .map_err(|_| OpenFileError::LaunchFailed)?;
+        bossy::Command::impure(command)
+            .run_and_detach()
+            .map_err(|e| OpenFileError::LaunchFailed(e))?;
 
         Ok(())
     }
@@ -94,25 +89,38 @@ pub fn open_file_with(
     // I feel "less" bad about it after I learned firefox also does it
     // https://support.mozilla.org/en-US/kb/utf-8-only-file-paths
     // But it still isn't perfect.
-    let app_str = application.as_ref().to_string_lossy();
-    let path_str = path.as_ref().to_string_lossy();
+    let app_str = application.as_ref();
+    let path_str = path.as_ref();
 
     for dir in xdg::get_xdg_data_dirs() {
         let dir = dir.join("applications");
         if let Some(entry) = xdg::find_entry_by_app_name(&dir, &app_str) {
-            let exec_str = entry.section("Desktop Entry")
-                .attr("Exec")
+
+            let command = if let Some(str_entry) = entry.section("Desktop Entry").attr("Exec") {
+                // If we have the entry, we return it as an OsString
+                let osstring_entry: OsString = str_entry.into();
+                xdg::build_command(&osstring_entry, path_str)
+            } else {
                 // If there is no attribute Exec we may as well try our luck with the app_str.
                 // The main reason is that I don't want to change the function return type.
-                .unwrap_or(&app_str);
+                // It returns a bossy error, not a parse error. If a command with that name
+                // exists, it
+                app_str.to_os_string()
+            };
 
-            bossy::Command::impure("sh")
-                .add_args(&["-c", &format!("nohup \"{}\" \"{}\" > /dev/null &", exec_str, path_str)])
-                .set_stdout(bossy::Stdio::null())
-                .set_stderr(bossy::Stdio::null())
-                .run_and_wait()?;
+            bossy::Command::impure(command)
+                .run_and_detach()?;
             break;
         }
     }
     Ok(())
+}
+
+// We use "sh" in order to access "command -v", as that is a bultin command on sh.
+// Linux does not require a binary "command" in path, so this seems the way to go.
+#[cfg(target_os = "linux")]
+pub fn command_path(name: &str) -> bossy::Result<bossy::Output> {
+    bossy::Command::impure("sh")
+        .with_args(&["-c", &format!("command -v {}", name)])
+        .run_and_wait_for_output()
 }

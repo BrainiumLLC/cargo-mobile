@@ -8,7 +8,7 @@ pub mod prompt;
 pub use self::{cargo::*, git::*, path::*};
 
 use self::cli::{Report, Reportable};
-use crate::os;
+use crate::os::{self, command_path};
 use once_cell_regex::{exports::regex::Captures, regex};
 use std::{
     fmt::{self, Display},
@@ -209,31 +209,6 @@ impl RustVersion {
 
 pub fn prepend_to_path(path: impl Display, base_path: impl Display) -> String {
     format!("{}:{}", path, base_path)
-}
-
-// I think these functions should go to OS
-
-#[cfg(target_os = "macos")]
-pub fn command_path(name: &str) -> bossy::Result<bossy::Output> {
-    bossy::Command::impure("command")
-        .with_args(&["-v", name])
-        .run_and_wait_for_output()
-}
-
-// Turns out my linux system has no "command" executable, even though it has an
-// entry at the posix manual. I can find it as a built-in command on sh, bash
-// and zsh, but as it is not an actual executable, bossy cannot find it.
-//
-// I know the "which" command kind of does the same as "command -v" so I replace
-// it by this on linux systems. The "which" command has a page at the linux manual,
-// so it should be fine on all linux systems.
-//
-// https://linux.die.net/man/1/which
-#[cfg(target_os = "linux")]
-pub fn command_path(name: &str) -> bossy::Result<bossy::Output> {
-    bossy::Command::impure("which")
-        .with_arg(name)
-        .run_and_wait_for_output()
 }
 
 pub fn command_present(name: &str) -> bossy::Result<bool> {
