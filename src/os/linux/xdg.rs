@@ -87,7 +87,7 @@ pub fn find_entry_by_app_name(dir_path: &Path, app_name: &str) -> Option<FreeDes
 pub fn build_command(command: &str, argument: &str) -> Option<String> {
     let mut command = command.to_string();
 
-    let arg_re = Regex::new(r"%u|%U|%f|%F").unwrap();
+    let arg_re = regex!(r"%u|%U|%f|%F");
     while let Some(mat) = arg_re.find(&command) {
         let start = mat.start();
         let end = mat.end();

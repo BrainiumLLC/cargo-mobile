@@ -1,4 +1,3 @@
-// #![cfg(target_os = "macos")]
 #![forbid(unsafe_code)]
 
 #[cfg(target_os = "macos")]
@@ -14,5 +13,11 @@ fn main() {
 
 #[cfg(not(target_os = "macos"))]
 fn main() {
-    panic!("Not supported outside of macos");
+    use cargo_mobile::util::cli::{Exit, Report};
+    Exit::main(|wrapper| {
+        Err(Exit::Report(Report::error(
+            "`cargo-apple` can only be used on macOS",
+            "Apple doesn't support building for iOS on other platforms, sorry!",
+        )))
+    })
 }
