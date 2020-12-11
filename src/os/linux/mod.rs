@@ -127,7 +127,6 @@ pub fn open_file_with(
     for dir in xdg::get_xdg_data_dirs() {
         let dir = dir.join("applications");
         if let Some((entry, entry_path)) = xdg::find_entry_by_app_name(&dir, &app_str) {
-            log::debug!("Decoding entry...");
             let command_parts = if let Some(str_entry) = entry.section("Desktop Entry").attr("Exec") {
                 // If we have the entry, we return it as an OsString
                 let osstring_entry: OsString = str_entry.into();
