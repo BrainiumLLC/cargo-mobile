@@ -3,18 +3,22 @@ mod xdg;
 use std::{
     ffi::{OsStr, OsString},
     fmt::{self, Display},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 #[derive(Debug)]
 pub enum DetectEditorError {
-    LookupFailed,
+    NoDefaultEditorSet,
+    FreeDesktopEntryNotFound,
+    FreeDesktopEntryParseError,
 }
 
 impl Display for DetectEditorError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::LookupFailed => write!(f, "Lookup failed"),
+            Self::NoDefaultEditorSet => write!(f, "No default editor is set: xdg-mime queries for \"text/rust\" and \"text/plain\" both failed"),
+            Self::FreeDesktopEntryNotFound => write!(f, "Entry Not Found: xdg-mime returned an entry name that could not be found"),
+            Self::FreeDesktopEntryParseError => write!(f, "Entry Parse Error: xdg-mime returned an entry that could not be parsed"),
         }
     }
 }
@@ -35,6 +39,8 @@ impl Display for OpenFileError {
 #[derive(Debug)]
 pub struct Application {
     exec_command: OsString,
+    icon: Option<OsString>,
+    xdg_entry_path: PathBuf,
 }
 
 impl Application {
@@ -47,7 +53,7 @@ impl Application {
             } else if let Some(plain_entry) = xdg::query_mime_entry("text/plain") {
                 plain_entry
             } else {
-                return Err(DetectEditorError::LookupFailed);
+                return Err(DetectEditorError::NoDefaultEditorSet);
             }
         };
 
@@ -55,27 +61,53 @@ impl Application {
             // Look at the applications folder of that dir
             let dir = dir.join("applications");
             if let Some(result) = xdg::find_entry_in_dir(&dir, &entry) {
+                let parsed = xdg::parse(&result)
+                    .ok_or(DetectEditorError::FreeDesktopEntryParseError)?;
                 return Ok(Self {
-                    exec_command: xdg::command_from_freedesktop_entry(&result)
-                        .ok_or(DetectEditorError::LookupFailed)?
+                    exec_command: parsed
+                        .section("Desktop Entry")
+                        .attr("Exec")
+                        .ok_or(DetectEditorError::FreeDesktopEntryParseError)?
+                        .into(),
+                    icon: parsed
+                        .section("Desktop Entry")
+                        .attr("Icon")
+                        .map(|s| s.into()),
+                    xdg_entry_path: dir.join(result),
                 })
             }
         }
 
-        Err(DetectEditorError::LookupFailed)
+        Err(DetectEditorError::FreeDesktopEntryNotFound)
     }
 
     pub fn open_file(&self, path: impl AsRef<Path>) -> Result<(), OpenFileError> {
         let path = path.as_ref();
 
-        let command = xdg::build_command(&self.exec_command, path.as_os_str());
+        let maybe_icon = if let Some(icon_str) = &self.icon {
+            Some(icon_str.as_os_str())
+        } else {
+            None
+        };
 
-        // I'm having a problem creating a dettached process with bossy,
-        // but this should work and be well supported on linux systems,
-        // as "sh" and no "nohup" are pretty standard.
-        bossy::Command::impure(command)
-            .run_and_detach()
-            .map_err(|e| OpenFileError::LaunchFailed(e))?;
+        // Parse the xdg command field with all the needed data
+        let command_parts = xdg::parse_command(
+            &self.exec_command,
+            path.as_os_str(),
+            maybe_icon,
+            Some(&self.xdg_entry_path)
+        );
+
+        if !command_parts.is_empty() {
+            // If command_parts has at least one element this works. If it has a single
+            // element, &command_parts[1..] should be an empty slice (&[]) and bossy
+            // `add_args` does not add any argument on that case, although the docs
+            // do not make it obvious.
+            bossy::Command::impure(&command_parts[0])
+                .add_args(&command_parts[1..])
+                .run_and_detach()
+                .map_err(|e| OpenFileError::LaunchFailed(e))?;
+        }
 
         Ok(())
     }
@@ -94,22 +126,30 @@ pub fn open_file_with(
 
     for dir in xdg::get_xdg_data_dirs() {
         let dir = dir.join("applications");
-        if let Some(entry) = xdg::find_entry_by_app_name(&dir, &app_str) {
-
-            let command = if let Some(str_entry) = entry.section("Desktop Entry").attr("Exec") {
+        if let Some((entry, entry_path)) = xdg::find_entry_by_app_name(&dir, &app_str) {
+            log::debug!("Decoding entry...");
+            let command_parts = if let Some(str_entry) = entry.section("Desktop Entry").attr("Exec") {
                 // If we have the entry, we return it as an OsString
                 let osstring_entry: OsString = str_entry.into();
-                xdg::build_command(&osstring_entry, path_str)
+                xdg::parse_command(
+                    &osstring_entry,
+                    path_str,
+                    entry.section("Desktop Entry").attr("Icon").map(|s| s.as_ref()),
+                    Some(&entry_path),
+                )
             } else {
                 // If there is no attribute Exec we may as well try our luck with the app_str.
                 // The main reason is that I don't want to change the function return type.
                 // It returns a bossy error, not a parse error. If a command with that name
                 // exists, it
-                app_str.to_os_string()
+                vec![app_str.to_os_string()]
             };
 
-            bossy::Command::impure(command)
-                .run_and_detach()?;
+            if !command_parts.is_empty() {
+                bossy::Command::impure(&command_parts[0])
+                    .add_args(&command_parts[1..])
+                    .run_and_detach()?;
+            }
             break;
         }
     }

@@ -140,7 +140,7 @@ dependencies = [
  "log",
  "objc",
  "objc_id",
- "once-cell-regex",
+ "once-cell-regex 0.2.1",
  "openssl",
  "path_abs",
  "publicsuffix",
@@ -452,7 +452,7 @@ checksum = "93b337f79d4b00458950f3d20136dfb9d1816a1d458601e025170a50d087192a"
 dependencies = [
  "bossy",
  "log",
- "once-cell-regex",
+ "once-cell-regex 0.1.1",
  "thiserror",
 ]
 
@@ -639,10 +639,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "once_cell"
-version = "1.3.1"
+name = "once-cell-regex"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1c601810575c99596d4afc46f78a678c80105117c379eb3650cf99b8a21ce5b"
+checksum = "b3de7e389a5043420c8f2b95ed03f3f104ad6f4c41f7d7e27298f033abc253e8"
+dependencies = [
+ "once_cell",
+ "regex",
+]
+
+[[package]]
+name = "once_cell"
+version = "1.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13bd41f508810a131401606d54ac32a467c97172d74ba7662562ebba5ad07fa0"
 
 [[package]]
 name = "opaque-debug"
