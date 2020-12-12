@@ -104,7 +104,7 @@ impl Application {
             // `add_args` does not add any argument on that case, although the docs
             // do not make it obvious.
             bossy::Command::impure(&command_parts[0])
-                .add_args(&command_parts[1..])
+                .with_args(&command_parts[1..])
                 .run_and_detach()
                 .map_err(|e| OpenFileError::LaunchFailed(e))?;
         }
