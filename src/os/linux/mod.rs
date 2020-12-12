@@ -47,7 +47,7 @@ pub struct Application {
 
 impl Application {
     pub fn detect_editor() -> Result<Self, DetectEditorError> {
-        // Try a rust code editor, then a plain text editor, if neither are available,
+        // Try a rust code editor, then a plain text editor. If neither are available,
         // then return an error.
         let entry = xdg::query_mime_entry("text/rust")
             .or_else(|| xdg::query_mime_entry("text/plain"))
@@ -104,7 +104,7 @@ impl Application {
         if !command_parts.is_empty() {
             // If command_parts has at least one element this works. If it has a single
             // element, &command_parts[1..] should be an empty slice (&[]) and bossy
-            // `add_args` does not add any argument on that case, although the docs
+            // `with_args` does not add any argument on that case, although the docs
             // do not make it obvious.
             bossy::Command::impure(&command_parts[0])
                 .with_args(&command_parts[1..])
@@ -127,6 +127,7 @@ pub fn open_file_with(
     let command_parts = xdg::get_xdg_data_dirs().iter().find_map(|dir| {
         let dir = dir.join("applications");
         let (entry, entry_path) = xdg::find_entry_by_app_name(&dir, &app_str)?;
+
         let command_parts = entry.section("Desktop Entry").attr("Exec")
             .and_then(|str_entry| {
                 let osstring_entry: OsString = str_entry.into();
@@ -149,7 +150,7 @@ pub fn open_file_with(
 
     // If command_parts has at least one element, this won't panic from Out of Bounds
     bossy::Command::impure(&command_parts[0])
-        .add_args(&command_parts[1..])
+        .with_args(&command_parts[1..])
         .run_and_detach()?;
     Ok(())
 }
