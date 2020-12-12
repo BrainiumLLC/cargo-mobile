@@ -26,12 +26,14 @@ impl Display for DetectEditorError {
 #[derive(Debug)]
 pub enum OpenFileError {
     LaunchFailed(bossy::Error),
+    CommandParsingFailed,
 }
 
 impl Display for OpenFileError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::LaunchFailed(e) => write!(f, "Launch failed: {}", e),
+            Self::CommandParsingFailed => write!(f, "Command parsing failed"),
         }
     }
 }
@@ -45,50 +47,51 @@ pub struct Application {
 
 impl Application {
     pub fn detect_editor() -> Result<Self, DetectEditorError> {
-        let entry = {
-            // Try a rust code editor, then a plain text editor, if neither are available,
-            // then return an error.
-            if let Some(rust_entry) = xdg::query_mime_entry("text/rust") {
-                rust_entry
-            } else if let Some(plain_entry) = xdg::query_mime_entry("text/plain") {
-                plain_entry
-            } else {
-                return Err(DetectEditorError::NoDefaultEditorSet);
-            }
-        };
+        // Try a rust code editor, then a plain text editor, if neither are available,
+        // then return an error.
+        let entry = xdg::query_mime_entry("text/rust")
+            .or_else(|| xdg::query_mime_entry("text/plain"))
+            .ok_or(DetectEditorError::NoDefaultEditorSet)?;
 
-        for dir in xdg::get_xdg_data_dirs() {
-            // Look at the applications folder of that dir
-            let dir = dir.join("applications");
-            if let Some(result) = xdg::find_entry_in_dir(&dir, &entry) {
-                let parsed = xdg::parse(&result)
-                    .ok_or(DetectEditorError::FreeDesktopEntryParseError)?;
-                return Ok(Self {
-                    exec_command: parsed
+        let mut some_entry_found = false;
+        Ok(
+            xdg::get_xdg_data_dirs().iter().find_map(|dir| {
+                let dir = dir.join("applications");
+                let entry_filepath = xdg::find_entry_in_dir(&dir, &entry)?;
+                some_entry_found = true;
+                let parsed_entry = xdg::parse(&entry_filepath)?;
+                Some(Self {
+                    // We absolutely want the Exec value
+                    exec_command: parsed_entry
                         .section("Desktop Entry")
-                        .attr("Exec")
-                        .ok_or(DetectEditorError::FreeDesktopEntryParseError)?
+                        .attr("Exec")?
                         .into(),
-                    icon: parsed
+                    // The icon is optional, we try getting it because the Exec value may need it
+                    icon: parsed_entry
                         .section("Desktop Entry")
                         .attr("Icon")
                         .map(|s| s.into()),
-                    xdg_entry_path: dir.join(result),
+                    xdg_entry_path: entry_filepath,
                 })
-            }
-        }
-
-        Err(DetectEditorError::FreeDesktopEntryNotFound)
+            })
+            .ok_or(
+                // Because if it found an entry then it must've failed while parsing it.
+                // Otherwise we wouldn't be here, as it would've returned Some(...)
+                if some_entry_found {
+                    DetectEditorError::FreeDesktopEntryParseError
+                } else {
+                    DetectEditorError::FreeDesktopEntryNotFound
+                }
+            )?
+        )
     }
 
     pub fn open_file(&self, path: impl AsRef<Path>) -> Result<(), OpenFileError> {
         let path = path.as_ref();
 
-        let maybe_icon = if let Some(icon_str) = &self.icon {
-            Some(icon_str.as_os_str())
-        } else {
-            None
-        };
+        let maybe_icon = self.icon
+            .as_ref()
+            .map(|icon_str| icon_str.as_os_str());
 
         // Parse the xdg command field with all the needed data
         let command_parts = xdg::parse_command(
@@ -107,9 +110,10 @@ impl Application {
                 .add_args(&command_parts[1..])
                 .run_and_detach()
                 .map_err(|e| OpenFileError::LaunchFailed(e))?;
+            Ok(())
+        } else {
+            Err(OpenFileError::CommandParsingFailed)
         }
-
-        Ok(())
     }
 }
 
@@ -117,41 +121,36 @@ pub fn open_file_with(
     application: impl AsRef<OsStr>,
     path: impl AsRef<OsStr>,
 ) -> bossy::Result<()> {
-    // I really dislike this lossy conversions
-    // I feel "less" bad about it after I learned firefox also does it
-    // https://support.mozilla.org/en-US/kb/utf-8-only-file-paths
-    // But it still isn't perfect.
     let app_str = application.as_ref();
     let path_str = path.as_ref();
 
-    for dir in xdg::get_xdg_data_dirs() {
+    let command_parts = xdg::get_xdg_data_dirs().iter().find_map(|dir| {
         let dir = dir.join("applications");
-        if let Some((entry, entry_path)) = xdg::find_entry_by_app_name(&dir, &app_str) {
-            let command_parts = if let Some(str_entry) = entry.section("Desktop Entry").attr("Exec") {
-                // If we have the entry, we return it as an OsString
+        let (entry, entry_path) = xdg::find_entry_by_app_name(&dir, &app_str)?;
+        let command_parts = entry.section("Desktop Entry").attr("Exec")
+            .and_then(|str_entry| {
                 let osstring_entry: OsString = str_entry.into();
-                xdg::parse_command(
+                Some(xdg::parse_command(
                     &osstring_entry,
                     path_str,
                     entry.section("Desktop Entry").attr("Icon").map(|s| s.as_ref()),
                     Some(&entry_path),
-                )
-            } else {
-                // If there is no attribute Exec we may as well try our luck with the app_str.
-                // The main reason is that I don't want to change the function return type.
-                // It returns a bossy error, not a parse error. If a command with that name
-                // exists, it
-                vec![app_str.to_os_string()]
-            };
-
+                ))
+            })?;
+            // This could go outside, but we'd better have a proper error for it then
             if !command_parts.is_empty() {
-                bossy::Command::impure(&command_parts[0])
-                    .add_args(&command_parts[1..])
-                    .run_and_detach()?;
+                Some(command_parts) // This guarantees that command_parts has at least one element
+            } else {
+                None
             }
-            break;
-        }
-    }
+    })
+    // Here is why we ought to change this function's return type, to fit this error
+    .unwrap_or_else(|| vec![app_str.to_os_string()]);
+
+    // If command_parts has at least one element, this won't panic from Out of Bounds
+    bossy::Command::impure(&command_parts[0])
+        .add_args(&command_parts[1..])
+        .run_and_detach()?;
     Ok(())
 }
 

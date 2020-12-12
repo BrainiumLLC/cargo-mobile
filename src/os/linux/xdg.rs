@@ -48,8 +48,8 @@ pub fn find_entry_in_dir(dir_path: &Path, target: &Path) -> Option<PathBuf> {
     None
 }
 
-pub fn parse(entry: &Path) -> Option<FreeDesktopEntry> {
-    parse_entry(entry).ok()
+pub fn parse(entry: impl AsRef<Path>) -> Option<FreeDesktopEntry> {
+    parse_entry(entry.as_ref()).ok()
 }
 
 /// Returns the first FreeDesktop XDG .desktop entry, found inside `dir_path`, when the
@@ -295,7 +295,7 @@ pub fn parse_command(
 pub fn get_xdg_data_dirs() -> Vec<PathBuf> {
     let mut result = Vec::new();
 
-    if let Ok(home) = env::var("HOME") {
+    if let Ok(home) = crate::util::home_dir() {
         let home: PathBuf = home.into();
         let xdg_data_home: PathBuf = if let Ok(var) = env::var("XDG_DATA_HOME") {
             var.into()
@@ -338,12 +338,12 @@ mod tests {
     fn parse_command_simple_quote_test() {
         assert_eq!(
             parse_command(
-                r#"simple.sh "%u" "single 'quotes' inside" 'double "quotes" inside'"#.as_ref(),
+                r#"simple.sh "%u" "single 'quotes' inside" 'double "quotes" inside' \"not quoted\""#.as_ref(),
                 "~/my folder/src".as_ref(),
                 None,
                 None,
             ),
-            ["simple.sh", "~/my folder/src", "single 'quotes' inside", r#"double "quotes" inside"#]
+            ["simple.sh", "~/my folder/src", "single 'quotes' inside", r#"double "quotes" inside"#, "\"not", "quoted\""]
         );
     }
 
