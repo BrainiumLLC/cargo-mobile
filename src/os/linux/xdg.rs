@@ -1,5 +1,5 @@
-use freedesktop_entry_parser::Entry as FreeDesktopEntry;
 use freedesktop_entry_parser::parse_entry;
+use freedesktop_entry_parser::Entry as FreeDesktopEntry;
 use once_cell_regex::{byte_regex, exports::regex::bytes::Regex};
 use std::{
     env,
@@ -18,7 +18,7 @@ pub fn query_mime_entry(mime_type: &str) -> Option<PathBuf> {
     if let Ok(out_str) = out.stdout_str() {
         log::debug!("query_mime_entry got output \"{}\"", out_str);
         if !out_str.is_empty() {
-            return Some(out_str.trim().into())
+            return Some(out_str.trim().into());
         }
     }
     None
@@ -35,7 +35,7 @@ pub fn find_entry_in_dir(dir_path: &Path, target: &Path) -> Option<PathBuf> {
         if let Ok(entry) = entry {
             // If it is a file with that same _filename_ (not full path)
             if entry.path().is_file() && entry.file_name() == target {
-                return Some(entry.path().into())
+                return Some(entry.path().into());
             } else if entry.path().is_dir() {
                 // I think if there are any dirs on that directory we have to
                 // recursively search on them
@@ -57,7 +57,10 @@ pub fn parse(entry: impl AsRef<Path>) -> Option<FreeDesktopEntry> {
 ///
 /// The return value is actually a tuple containing the entry itself, and the path at which
 /// it was found.
-pub fn find_entry_by_app_name(dir_path: &Path, app_name: &OsStr) -> Option<(FreeDesktopEntry, PathBuf)> {
+pub fn find_entry_by_app_name(
+    dir_path: &Path,
+    app_name: &OsStr,
+) -> Option<(FreeDesktopEntry, PathBuf)> {
     for entry in dir_path.read_dir().ok()? {
         if let Ok(entry) = entry {
             // If it is a file we open it
@@ -80,7 +83,11 @@ pub fn find_entry_by_app_name(dir_path: &Path, app_name: &OsStr) -> Option<(Free
     None
 }
 
-fn replace_on_pattern(text: impl AsRef<OsStr>, replace_by: impl AsRef<OsStr>, regex: &Regex) -> OsString {
+fn replace_on_pattern(
+    text: impl AsRef<OsStr>,
+    replace_by: impl AsRef<OsStr>,
+    regex: &Regex,
+) -> OsString {
     let text = text.as_ref();
     let replace_by = replace_by.as_ref();
 
@@ -151,10 +158,18 @@ fn parse_unquoted_text(
     let result = replace_on_pattern(text, argument, arg_re);
 
     // Then the other flags
-    let icon_replace = if let Some(icon_os_str) = icon { icon_os_str } else { "".as_ref() };
+    let icon_replace = if let Some(icon_os_str) = icon {
+        icon_os_str
+    } else {
+        "".as_ref()
+    };
     let result = replace_on_pattern(result, icon_replace, byte_regex!("%i"));
 
-    let desktop_entry_replace = if let Some(path) = desktop_entry_path { path.as_os_str() } else { "".as_ref() };
+    let desktop_entry_replace = if let Some(path) = desktop_entry_path {
+        path.as_os_str()
+    } else {
+        "".as_ref()
+    };
     let result = replace_on_pattern(result, desktop_entry_replace, byte_regex!("%k"));
 
     // The other % flags are deprecated so we clear them, except double percentage
@@ -178,7 +193,11 @@ pub fn parse_command(
     icon: Option<&OsStr>,
     desktop_entry_path: Option<&Path>,
 ) -> Vec<OsString> {
-    log::debug!("Parsing XDG Exec command {:?}, with argument {:?}", command, argument);
+    log::debug!(
+        "Parsing XDG Exec command {:?}, with argument {:?}",
+        command,
+        argument
+    );
 
     // let command_name_re = byte_regex!(r#"^[^ \t"]+|"[^ \t]+""#);
     let mut escape_char = false;
@@ -284,7 +303,11 @@ pub fn parse_command(
         text_atom.clear();
     }
 
-    log::debug!("XDG parsed command {:?} to {:?}", command, parsed_command_parts);
+    log::debug!(
+        "XDG parsed command {:?} to {:?}",
+        command,
+        parsed_command_parts
+    );
     parsed_command_parts
 }
 
@@ -364,13 +387,23 @@ mod tests {
     fn parse_command_complex_test() {
         assert_eq!(
             parse_command(
-                r#"test_command --flag %u --another "thing \\\\" %i %% %k My\ Work\ Place"#.as_ref(),
+                r#"test_command --flag %u --another "thing \\\\" %i %% %k My\ Work\ Place"#
+                    .as_ref(),
                 "/my/file/folder/file.rs".as_ref(),
                 Some("/foo/bar/something/myicon.xpg".as_ref()),
                 Some("/foo/bar/applications/test.desktop".as_ref()),
             ),
-            ["test_command", "--flag", "/my/file/folder/file.rs", "--another", r"thing \", "/foo/bar/something/myicon.xpg", "%",
-             "/foo/bar/applications/test.desktop", "My Work Place"]
+            [
+                "test_command",
+                "--flag",
+                "/my/file/folder/file.rs",
+                "--another",
+                r"thing \",
+                "/foo/bar/something/myicon.xpg",
+                "%",
+                "/foo/bar/applications/test.desktop",
+                "My Work Place"
+            ]
         );
     }
 }
