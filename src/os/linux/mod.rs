@@ -109,7 +109,7 @@ impl Application {
             bossy::Command::impure(&command_parts[0])
                 .with_args(&command_parts[1..])
                 .run_and_detach()
-                .map_err(|e| OpenFileError::LaunchFailed(e))?;
+                .map_err(OpenFileError::LaunchFailed)?;
             Ok(())
         } else {
             Err(OpenFileError::CommandParsingFailed)
