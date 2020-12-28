@@ -3,6 +3,7 @@ mod xdg;
 use std::{
     ffi::{OsStr, OsString},
     fmt::{self, Display},
+    io,
     path::{Path, PathBuf},
 };
 
@@ -10,7 +11,8 @@ use std::{
 pub enum DetectEditorError {
     NoDefaultEditorSet,
     FreeDesktopEntryNotFound,
-    FreeDesktopEntryParseError,
+    FreeDesktopEntryParseError(io::Error),
+    ExecFieldMissing,
 }
 
 impl Display for DetectEditorError {
@@ -18,7 +20,8 @@ impl Display for DetectEditorError {
         match self {
             Self::NoDefaultEditorSet => write!(f, "No default editor is set: xdg-mime queries for \"text/rust\" and \"text/plain\" both failed"),
             Self::FreeDesktopEntryNotFound => write!(f, "Entry Not Found: xdg-mime returned an entry name that could not be found"),
-            Self::FreeDesktopEntryParseError => write!(f, "Entry Parse Error: xdg-mime returned an entry that could not be parsed"),
+            Self::FreeDesktopEntryParseError(e) => write!(f, "Entry Parse Error: xdg-mime returned an entry that could not be parsed. Caused by {:?}", e),
+            Self::ExecFieldMissing => write!(f, "Exec field on desktop entry was not found"),
         }
     }
 }
@@ -53,34 +56,32 @@ impl Application {
             .or_else(|| xdg::query_mime_entry("text/plain"))
             .ok_or(DetectEditorError::NoDefaultEditorSet)?;
 
-        let mut some_entry_found = false;
-        Ok(xdg::get_xdg_data_dirs()
+        xdg::get_xdg_data_dirs()
             .iter()
             .find_map(|dir| {
                 let dir = dir.join("applications");
-                let entry_filepath = xdg::find_entry_in_dir(&dir, &entry)?;
-                some_entry_found = true;
-                let parsed_entry = xdg::parse(&entry_filepath)?;
-                Some(Self {
-                    // We absolutely want the Exec value
-                    exec_command: parsed_entry.section("Desktop Entry").attr("Exec")?.into(),
-                    // The icon is optional, we try getting it because the Exec value may need it
-                    icon: parsed_entry
-                        .section("Desktop Entry")
-                        .attr("Icon")
-                        .map(|s| s.into()),
-                    xdg_entry_path: entry_filepath,
+                xdg::find_entry_in_dir(&dir, &entry).map(|entry_filepath| {
+                    xdg::parse(&entry_filepath)
+                        .map_err(DetectEditorError::FreeDesktopEntryParseError)
+                        .and_then(|parsed_entry| {
+                            Ok(Self {
+                                // We absolutely want the Exec value
+                                exec_command: parsed_entry
+                                    .section("Desktop Entry")
+                                    .attr("Exec")
+                                    .ok_or(DetectEditorError::ExecFieldMissing)?
+                                    .into(),
+                                // The icon is optional, we try getting it because the Exec value may need it
+                                icon: parsed_entry
+                                    .section("Desktop Entry")
+                                    .attr("Icon")
+                                    .map(Into::into),
+                                xdg_entry_path: entry_filepath,
+                            })
+                        })
                 })
             })
-            .ok_or(
-                // Because if it found an entry then it must've failed while parsing it.
-                // Otherwise we wouldn't be here, as it would've returned Some(...)
-                if some_entry_found {
-                    DetectEditorError::FreeDesktopEntryParseError
-                } else {
-                    DetectEditorError::FreeDesktopEntryNotFound
-                },
-            )?)
+            .ok_or(DetectEditorError::FreeDesktopEntryNotFound)?
     }
 
     pub fn open_file(&self, path: impl AsRef<Path>) -> Result<(), OpenFileError> {
@@ -104,8 +105,7 @@ impl Application {
             bossy::Command::impure(&command_parts[0])
                 .with_args(&command_parts[1..])
                 .run_and_detach()
-                .map_err(OpenFileError::LaunchFailed)?;
-            Ok(())
+                .map_err(OpenFileError::LaunchFailed)
         } else {
             Err(OpenFileError::CommandParsingFailed)
         }
@@ -125,22 +125,21 @@ pub fn open_file_with(
             let dir = dir.join("applications");
             let (entry, entry_path) = xdg::find_entry_by_app_name(&dir, &app_str)?;
 
-            let command_parts =
-                entry
-                    .section("Desktop Entry")
-                    .attr("Exec")
-                    .and_then(|str_entry| {
-                        let osstring_entry: OsString = str_entry.into();
-                        Some(xdg::parse_command(
-                            &osstring_entry,
-                            path_str,
-                            entry
-                                .section("Desktop Entry")
-                                .attr("Icon")
-                                .map(|s| s.as_ref()),
-                            Some(&entry_path),
-                        ))
-                    })?;
+            let command_parts = entry
+                .section("Desktop Entry")
+                .attr("Exec")
+                .map(|str_entry| {
+                    let osstring_entry: OsString = str_entry.into();
+                    xdg::parse_command(
+                        &osstring_entry,
+                        path_str,
+                        entry
+                            .section("Desktop Entry")
+                            .attr("Icon")
+                            .map(|s| s.as_ref()),
+                        Some(&entry_path),
+                    )
+                })?;
             // This could go outside, but we'd better have a proper error for it then
             if !command_parts.is_empty() {
                 Some(command_parts) // This guarantees that command_parts has at least one element

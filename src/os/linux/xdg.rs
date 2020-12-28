@@ -1,9 +1,9 @@
-use freedesktop_entry_parser::parse_entry;
-use freedesktop_entry_parser::Entry as FreeDesktopEntry;
+use freedesktop_entry_parser::{parse_entry, Entry as FreeDesktopEntry};
 use once_cell_regex::{byte_regex, exports::regex::bytes::Regex};
 use std::{
     env,
     ffi::{OsStr, OsString},
+    io,
     os::unix::ffi::{OsStrExt, OsStringExt},
     path::{Path, PathBuf},
 };
@@ -11,25 +11,18 @@ use std::{
 // Detects which .desktop file contains the data on how to handle a given
 // mime type (like: "with which program do I open a text/rust file?")
 pub fn query_mime_entry(mime_type: &str) -> Option<PathBuf> {
-    let out = bossy::Command::impure_parse("xdg-mime query default")
+    bossy::Command::impure_parse("xdg-mime query default")
         .with_arg(mime_type)
         .add_args(&["query", "default", mime_type])
         .run_and_wait_for_str(|out_str| {
             log::debug!("query_mime_entry got output {:?}", out_str);
             if !out_str.is_empty() {
-                Some(out_str.trim().into())
+                Some(PathBuf::from(out_str.trim()))
             } else {
                 None
             }
         })
-        .ok()?;
-    if let Ok(out_str) = out.stdout_str() {
-        log::debug!("query_mime_entry got output {:?}", out_str);
-        if !out_str.is_empty() {
-            return Some(out_str.trim().into());
-        }
-    }
-    None
+        .ok()?
 }
 
 // Returns the first entry on that directory whose filename is equal to target.
@@ -56,8 +49,8 @@ pub fn find_entry_in_dir(dir_path: &Path, target: &Path) -> Option<PathBuf> {
     None
 }
 
-pub fn parse(entry: impl AsRef<Path>) -> Option<FreeDesktopEntry> {
-    parse_entry(entry.as_ref()).ok()
+pub fn parse(entry: impl AsRef<Path>) -> io::Result<FreeDesktopEntry> {
+    parse_entry(entry.as_ref())
 }
 
 /// Returns the first FreeDesktop XDG .desktop entry, found inside `dir_path`, when the
@@ -69,27 +62,24 @@ pub fn find_entry_by_app_name(
     dir_path: &Path,
     app_name: &OsStr,
 ) -> Option<(FreeDesktopEntry, PathBuf)> {
-    for entry in dir_path.read_dir().filter_map(Result::ok).ok()? {
-        if let Ok(entry) = entry {
-            // If it is a file we open it
-            if entry.path().is_file() {
-                if let Ok(parsed) = parse_entry(entry.path()) {
-                    if parsed
-                        .section("Desktop Entry")
-                        .attr("Name")
-                        .map(str::as_ref)
-                        == Some(app_name)
-                    {
-                        if name == app_name {
-                            return Some((parsed, entry.path().into()));
-                        }
-                    }
+    for entry in dir_path.read_dir().ok()?.filter_map(Result::ok) {
+        let entry_path = entry.path();
+        // If it is a file we open it
+        if entry_path.is_file() {
+            if let Ok(parsed) = parse_entry(&entry_path) {
+                if parsed
+                    .section("Desktop Entry")
+                    .attr("Name")
+                    .map(str::as_ref)
+                    == Some(app_name)
+                {
+                    return Some((parsed, entry_path));
                 }
-            } else if entry.path().is_dir() {
-                // Recursively keep searching if it is a directory
-                if let Some(result) = find_entry_by_app_name(&entry.path(), app_name) {
-                    return Some(result);
-                }
+            }
+        } else if entry.path().is_dir() {
+            // Recursively keep searching if it is a directory
+            if let Some(result) = find_entry_by_app_name(&entry_path, app_name) {
+                return Some(result);
             }
         }
     }
