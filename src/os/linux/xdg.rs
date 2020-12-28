@@ -11,12 +11,20 @@ use std::{
 // Detects which .desktop file contains the data on how to handle a given
 // mime type (like: "with which program do I open a text/rust file?")
 pub fn query_mime_entry(mime_type: &str) -> Option<PathBuf> {
-    let out = bossy::Command::impure("xdg-mime")
+    let out = bossy::Command::impure_parse("xdg-mime query default")
+        .with_arg(mime_type)
         .add_args(&["query", "default", mime_type])
-        .run_and_wait_for_output()
+        .run_and_wait_for_str(|out_str| {
+            log::debug!("query_mime_entry got output {:?}", out_str);
+            if !out_str.is_empty() {
+                Some(out_str.trim().into())
+            } else {
+                None
+            }
+        })
         .ok()?;
     if let Ok(out_str) = out.stdout_str() {
-        log::debug!("query_mime_entry got output \"{}\"", out_str);
+        log::debug!("query_mime_entry got output {:?}", out_str);
         if !out_str.is_empty() {
             return Some(out_str.trim().into());
         }
@@ -61,12 +69,17 @@ pub fn find_entry_by_app_name(
     dir_path: &Path,
     app_name: &OsStr,
 ) -> Option<(FreeDesktopEntry, PathBuf)> {
-    for entry in dir_path.read_dir().ok()? {
+    for entry in dir_path.read_dir().filter_map(Result::ok).ok()? {
         if let Ok(entry) = entry {
             // If it is a file we open it
             if entry.path().is_file() {
                 if let Ok(parsed) = parse_entry(entry.path()) {
-                    if let Some(name) = parsed.section("Desktop Entry").attr("Name") {
+                    if parsed
+                        .section("Desktop Entry")
+                        .attr("Name")
+                        .map(str::as_ref)
+                        == Some(app_name)
+                    {
                         if name == app_name {
                             return Some((parsed, entry.path().into()));
                         }
