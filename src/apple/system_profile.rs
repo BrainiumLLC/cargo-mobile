@@ -57,8 +57,12 @@ impl DeveloperTools {
             },
         )
         .map_err(|ras_err| match ras_err {
-            util::RunAndSearchError::CommandFailed(_) => Error::SystemProfilerCommandFailed(ras_err),
-            util::RunAndSearchError::SearchFailed { .. } => Error::SystemProfilerRegexFailed(ras_err),
+            util::RunAndSearchError::CommandFailed(_) => {
+                Error::SystemProfilerCommandFailed(ras_err)
+            }
+            util::RunAndSearchError::SearchFailed { .. } => {
+                Error::SystemProfilerRegexFailed(ras_err)
+            }
         })?
     }
 }
