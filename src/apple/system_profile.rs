@@ -5,7 +5,9 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum Error {
     #[error(transparent)]
-    SystemProfilerFailed(#[from] util::RunAndSearchError),
+    SystemProfilerCommandFailed(#[from] util::RunAndSearchError),
+    #[error("\tError: {0:?}\nFailed to parse the output of system_profiler. Is Xcode installed?")]
+    SystemProfilerRegexFailed(util::RunAndSearchError),
     #[error("The major version {major:?} wasn't a valid number: {source}")]
     MajorVersionInvalid {
         major: String,
@@ -54,6 +56,9 @@ impl DeveloperTools {
                 })
             },
         )
-        .map_err(Error::SystemProfilerFailed)?
+        .map_err(|ras_err| match ras_err {
+            util::RunAndSearchError::CommandFailed(_) => Error::SystemProfilerCommandFailed(ras_err),
+            util::RunAndSearchError::SearchFailed { .. } => Error::SystemProfilerRegexFailed(ras_err),
+        })?
     }
 }
