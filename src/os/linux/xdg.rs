@@ -13,7 +13,6 @@ use std::{
 pub fn query_mime_entry(mime_type: &str) -> Option<PathBuf> {
     bossy::Command::impure_parse("xdg-mime query default")
         .with_arg(mime_type)
-        .add_args(&["query", "default", mime_type])
         .run_and_wait_for_str(|out_str| {
             log::debug!("query_mime_entry got output {:?}", out_str);
             if !out_str.is_empty() {
@@ -31,7 +30,7 @@ pub fn query_mime_entry(mime_type: &str) -> Option<PathBuf> {
 // https://specifications.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html
 // This other one does not give that idea:
 // https://specifications.freedesktop.org/menu-spec/latest/ar01s02.html
-pub fn find_entry_in_dir(dir_path: &Path, target: &Path) -> Option<PathBuf> {
+pub fn find_entry_in_dir(dir_path: &Path, target: &Path) -> std::io::Result<Option<PathBuf>> {
     for entry in dir_path.read_dir().ok()? {
         if let Ok(entry) = entry {
             // If it is a file with that same _filename_ (not full path)
@@ -322,7 +321,6 @@ pub fn get_xdg_data_dirs() -> Vec<PathBuf> {
     let mut result = Vec::new();
 
     if let Ok(home) = crate::util::home_dir() {
-        let home: PathBuf = home.into();
         let xdg_data_home: PathBuf = if let Ok(var) = env::var("XDG_DATA_HOME") {
             var.into()
         } else {
@@ -332,7 +330,7 @@ pub fn get_xdg_data_dirs() -> Vec<PathBuf> {
     }
 
     if let Ok(var) = env::var("XDG_DATA_DIRS") {
-        let entries = var.split(":").map(|dirname| PathBuf::from(dirname));
+        let entries = var.split(":").map(PathBuf::from);
         result.extend(entries);
     } else {
         // These are the default ones we'll use in case the var is not set
