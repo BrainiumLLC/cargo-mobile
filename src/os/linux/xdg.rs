@@ -31,21 +31,21 @@ pub fn query_mime_entry(mime_type: &str) -> Option<PathBuf> {
 // This other one does not give that idea:
 // https://specifications.freedesktop.org/menu-spec/latest/ar01s02.html
 pub fn find_entry_in_dir(dir_path: &Path, target: &Path) -> std::io::Result<Option<PathBuf>> {
-    for entry in dir_path.read_dir().ok()? {
+    for entry in dir_path.read_dir()? {
         if let Ok(entry) = entry {
             // If it is a file with that same _filename_ (not full path)
             if entry.path().is_file() && entry.file_name() == target {
-                return Some(entry.path().into());
+                return Ok(Some(entry.path().into()));
             } else if entry.path().is_dir() {
                 // I think if there are any dirs on that directory we have to
                 // recursively search on them
-                if let Some(result) = find_entry_in_dir(&entry.path(), target) {
-                    return Some(result);
+                if let Some(result) = find_entry_in_dir(&entry.path(), target)? {
+                    return Ok(Some(result));
                 }
             }
         }
     }
-    None
+    Ok(None)
 }
 
 pub fn parse(entry: impl AsRef<Path>) -> io::Result<FreeDesktopEntry> {
@@ -160,18 +160,10 @@ fn parse_unquoted_text(
     let result = replace_on_pattern(text, argument, arg_re);
 
     // Then the other flags
-    let icon_replace = if let Some(icon_os_str) = icon {
-        icon_os_str
-    } else {
-        "".as_ref()
-    };
+    let icon_replace = icon.unwrap_or_else(|| "".as_ref());
     let result = replace_on_pattern(result, icon_replace, byte_regex!("%i"));
 
-    let desktop_entry_replace = if let Some(path) = desktop_entry_path {
-        path.as_os_str()
-    } else {
-        "".as_ref()
-    };
+    let desktop_entry_replace = desktop_entry_path.unwrap_or_else(|| "".as_ref());
     let result = replace_on_pattern(result, desktop_entry_replace, byte_regex!("%k"));
 
     // The other % flags are deprecated so we clear them, except double percentage
@@ -315,17 +307,16 @@ pub fn parse_command(
 
 // Returns a vector of all the relevant xdg desktop application entries
 // Check out:
+// https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
 // https://wiki.archlinux.org/index.php/XDG_Base_Directory
 // That explains the default values and the relevant variables.
 pub fn get_xdg_data_dirs() -> Vec<PathBuf> {
     let mut result = Vec::new();
 
     if let Ok(home) = crate::util::home_dir() {
-        let xdg_data_home: PathBuf = if let Ok(var) = env::var("XDG_DATA_HOME") {
-            var.into()
-        } else {
-            home.join(".local/share") // The default
-        };
+        let xdg_data_home = env::var("XDG_DATA_HOME")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| home.join(".local/share")); // The default
         result.push(xdg_data_home);
     }
 
