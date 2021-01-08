@@ -211,13 +211,7 @@ pub fn prepend_to_path(path: impl Display, base_path: impl Display) -> String {
 }
 
 pub fn command_present(name: &str) -> bossy::Result<bool> {
-    command_path(name).map(|_path| true).or_else(|err| {
-        if let Some(1) = err.status().and_then(|status| status.code()) {
-            Ok(false)
-        } else {
-            Err(err)
-        }
-    })
+    command_path(name).map(|output| output.status().success())
 }
 
 #[derive(Debug)]

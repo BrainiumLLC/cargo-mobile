@@ -162,8 +162,7 @@ pub fn open_file_with(
     // If command_parts has at least one element, this won't panic from Out of Bounds
     bossy::Command::impure(&command_parts[0])
         .with_args(&command_parts[1..])
-        .run_and_detach()?;
-    Ok(())
+        .run_and_detach()
 }
 
 // We use "sh" in order to access "command -v", as that is a bultin command on sh.
