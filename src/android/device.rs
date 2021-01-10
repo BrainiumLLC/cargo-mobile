@@ -188,12 +188,13 @@ impl<'a> Device<'a> {
     pub fn run(
         &self,
         config: &Config,
+        metadata: &Metadata,
         env: &Env,
         noise_level: NoiseLevel,
         profile: Profile,
     ) -> Result<(), RunError> {
         let force_color = ForceColor::Yes;
-        self.target.build(config, &Metadata::default(), env, noise_level, force_color, profile)
+        self.target.build(config, metadata, env, noise_level, force_color, profile)
             .map_err(RunError::CompilationError)?;
         self.build_apk(config, env, noise_level, profile)
             .map_err(RunError::ApkBuildFailed)?;
