@@ -1,13 +1,13 @@
 use super::{
     adb,
-    config::Config,
+    config::{Config, Metadata},
     env::Env,
     jnilibs::{self, JniLibs},
     target::{BuildError, Target},
 };
 use crate::{
     env::ExplicitEnv as _,
-    opts::{NoiseLevel, Profile},
+    opts::{NoiseLevel, Profile, ForceColor},
     util::{
         self,
         cli::{Report, Reportable},
@@ -60,6 +60,7 @@ pub enum RunError {
     StartFailed(bossy::Error),
     WakeScreenFailed(bossy::Error),
     LogcatFailed(bossy::Error),
+    CompilationError(BuildError),
 }
 
 impl Reportable for RunError {
@@ -70,6 +71,7 @@ impl Reportable for RunError {
             Self::StartFailed(err) => Report::error("Failed to start app on device", err),
             Self::WakeScreenFailed(err) => Report::error("Failed to wake device screen", err),
             Self::LogcatFailed(err) => Report::error("Failed to log output", err),
+            Self::CompilationError(err) => err.report(),
         }
     }
 }
@@ -190,6 +192,9 @@ impl<'a> Device<'a> {
         noise_level: NoiseLevel,
         profile: Profile,
     ) -> Result<(), RunError> {
+        let force_color = ForceColor::Yes;
+        self.target.build(config, &Metadata::default(), env, noise_level, force_color, profile)
+            .map_err(RunError::CompilationError)?;
         self.build_apk(config, env, noise_level, profile)
             .map_err(RunError::ApkBuildFailed)?;
         self.install_apk(config, env, profile)
