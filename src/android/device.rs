@@ -7,7 +7,7 @@ use super::{
 };
 use crate::{
     env::ExplicitEnv as _,
-    opts::{NoiseLevel, Profile, ForceColor},
+    opts::{ForceColor, NoiseLevel, Profile},
     util::{
         self,
         cli::{Report, Reportable},
@@ -194,7 +194,8 @@ impl<'a> Device<'a> {
         profile: Profile,
     ) -> Result<(), RunError> {
         let force_color = ForceColor::Yes;
-        self.target.build(config, metadata, env, noise_level, force_color, profile)
+        self.target
+            .build(config, metadata, env, noise_level, force_color, profile)
             .map_err(RunError::CompilationError)?;
         self.build_apk(config, env, noise_level, profile)
             .map_err(RunError::ApkBuildFailed)?;
