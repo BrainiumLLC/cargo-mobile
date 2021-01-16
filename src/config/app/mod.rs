@@ -1,4 +1,5 @@
 mod common_email_providers;
+pub mod domain;
 pub mod name;
 mod raw;
 
@@ -93,7 +94,7 @@ impl App {
 
         let domain = {
             let domain = raw.domain;
-            if publicsuffix::Domain::has_valid_syntax(&domain) {
+            if domain::check_domain_syntax(&domain).is_ok() {
                 Ok(domain)
             } else {
                 Err(Error::DomainInvalid { domain })
