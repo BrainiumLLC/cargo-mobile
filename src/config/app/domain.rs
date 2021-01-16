@@ -38,7 +38,7 @@ impl fmt::Display for DomainError {
     }
 }
 
-pub fn check_domain_syntax(domain_name: &str) -> Result<&str, DomainError> {
+pub fn check_domain_syntax(domain_name: &str) -> Result<(), DomainError> {
     if domain_name.is_empty() {
         return Err(DomainError::Empty);
     }
@@ -73,7 +73,7 @@ pub fn check_domain_syntax(domain_name: &str) -> Result<&str, DomainError> {
             package_name: last_label.to_owned(),
         });
     }
-    Ok(domain_name)
+    Ok(())
 }
 
 #[cfg(test)]
@@ -89,7 +89,7 @@ mod test {
         case("java.test")
     )]
     fn test_check_domain_syntax_correct(input: &str) {
-        assert_eq!(check_domain_syntax(input).unwrap(), input)
+        assert_eq!(check_domain_syntax(input).unwrap(), ())
     }
 
     #[rstest(input, error,

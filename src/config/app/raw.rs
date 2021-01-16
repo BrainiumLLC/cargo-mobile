@@ -236,7 +236,7 @@ impl Raw {
             let response = prompt::default("Domain", Some(&defaults.domain), None)
                 .map_err(PromptError::DomainPromptFailed)?;
             match domain::check_domain_syntax(response.as_str()) {
-                Ok(res) => break res.to_owned(),
+                Ok(_) => break response,
                 Err(err) => {
                     println!(
                         "{}",
