@@ -1,5 +1,6 @@
 plugins {
     id("com.android.application")
+    id("rustPlugin")
 }
 
 android {
@@ -41,5 +42,21 @@ android {
                 setAbiFilters(listOf("{{this.abi}}"))
             }
         }{{/each}}
+    }
+}
+
+rust {
+    rootDirRel = "{{root-dir-rel}}"
+    targets = listOf({{quote-and-join target-names}})
+    arches = listOf({{quote-and-join arches}})
+}
+
+afterEvaluate {
+    android.applicationVariants.all {
+        val buildType = "${buildType.name.capitalize()}"
+        productFlavors.forEach {
+            val archAndBuildType = name.capitalize()
+            tasks["assemble${archAndBuildType}"].dependsOn(tasks["rustBuild${archAndBuildType}"])
+        }
     }
 }
