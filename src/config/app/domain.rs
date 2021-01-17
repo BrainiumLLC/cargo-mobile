@@ -67,11 +67,12 @@ pub fn check_domain_syntax(domain_name: &str) -> Result<(), DomainError> {
             return Err(DomainError::NotAsciiAlphanumeric { bad_chars });
         }
     }
-    let last_label = domain_name.split(".").last().unwrap();
-    if RESERVED_PACKAGE_NAMES.contains(&last_label) {
-        return Err(DomainError::ReservedPackageName {
-            package_name: last_label.to_owned(),
-        });
+    for pkg_name in RESERVED_PACKAGE_NAMES.iter() {
+        if domain_name.ends_with(pkg_name) {
+            return Err(DomainError::ReservedPackageName {
+                package_name: pkg_name.to_string(),
+            });
+        }
     }
     Ok(())
 }
