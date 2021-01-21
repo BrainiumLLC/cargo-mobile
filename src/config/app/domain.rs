@@ -112,7 +112,7 @@ impl fmt::Display for DomainError {
                 label
             ),
             Self::StartsOrEndsWithADot => write!(f, "Domain can't start or end with a dot."),
-            Self::EmptyLabel => write!(f, "Labels cannot be empty."),
+            Self::EmptyLabel => write!(f, "Labels can't be empty."),
         }
     }
 }
