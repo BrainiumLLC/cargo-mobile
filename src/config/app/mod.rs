@@ -25,6 +25,7 @@ pub enum Error {
     NameInvalid(name::Invalid),
     DomainInvalid {
         domain: String,
+        cause: domain::DomainError,
     },
     AssetDirNormalizationFailed {
         asset_dir: PathBuf,
@@ -43,12 +44,9 @@ impl Error {
             Self::NameInvalid(err) => {
                 Report::error(msg, format!("`{}.name` invalid: {}", KEY, err))
             }
-            Self::DomainInvalid { domain } => Report::error(
+            Self::DomainInvalid { domain, cause } => Report::error(
                 msg,
-                format!(
-                    "`{}.domain` invalid: {:?} isn't valid domain syntax",
-                    KEY, domain
-                ),
+                format!("`{}.domain` {:?} isn't valid: {}", KEY, domain, cause),
             ),
             Self::AssetDirNormalizationFailed { asset_dir, cause } => Report::error(
                 msg,
@@ -94,11 +92,12 @@ impl App {
 
         let domain = {
             let domain = raw.domain;
-            if domain::check_domain_syntax(&domain).is_ok() {
-                Ok(domain)
-            } else {
-                Err(Error::DomainInvalid { domain })
-            }
+            domain::check_domain_syntax(&domain)
+                .map_err(|cause| Error::DomainInvalid {
+                    domain: domain.clone(),
+                    cause,
+                })
+                .map(|()| domain)
         }?;
 
         if raw.asset_dir.as_deref() == Some(DEFAULT_ASSET_DIR) {

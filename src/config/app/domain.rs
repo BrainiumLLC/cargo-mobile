@@ -1,7 +1,73 @@
+use crate::util::list_display;
 use std::error::Error;
 use std::fmt;
 
-static RESERVED_PACKAGE_NAMES: [&'static str; 2] = ["kotlin", "java"];
+static RESERVED_PACKAGE_NAMES: [&str; 2] = ["kotlin", "java"];
+static RESERVED_KEYWORDS: [&str; 63] = [
+    "abstract",
+    "as",
+    "assert",
+    "boolean",
+    "break",
+    "byte",
+    "case",
+    "catch",
+    "char",
+    "class",
+    "const",
+    "continue",
+    "default",
+    "do",
+    "double",
+    "else",
+    "enum",
+    "extends",
+    "false",
+    "final",
+    "finally",
+    "float",
+    "for",
+    "fun",
+    "goto",
+    "if",
+    "implements",
+    "import",
+    "instanceof",
+    "in",
+    "int",
+    "interface",
+    "is",
+    "long",
+    "native",
+    "new",
+    "null",
+    "object",
+    "package",
+    "private",
+    "protected",
+    "public",
+    "return",
+    "short",
+    "static",
+    "strictfp",
+    "super",
+    "switch",
+    "synchronized",
+    "this",
+    "throw",
+    "throws",
+    "transient",
+    "true",
+    "try",
+    "typealias",
+    "typeof",
+    "val",
+    "var",
+    "void",
+    "volatile",
+    "when",
+    "while",
+];
 
 #[derive(Debug)]
 pub enum DomainError {
@@ -9,6 +75,7 @@ pub enum DomainError {
     NotAsciiAlphanumeric { bad_chars: Vec<char> },
     StartsWithDigit { label: String },
     ReservedPackageName { package_name: String },
+    ReservedKeyword { keyword: String },
     StartsOrEndsWithADot,
     EmptyLabel,
 }
@@ -18,22 +85,34 @@ impl Error for DomainError {}
 impl fmt::Display for DomainError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Empty => write!(f, "Domain can't be empty"),
+            Self::Empty => write!(f, "Domain can't be empty."),
             Self::NotAsciiAlphanumeric { bad_chars } => write!(
                 f,
-                "\"{}\" are not valid ASCII alphanumeric characters",
-                bad_chars.into_iter().collect::<String>()
+                "{} characters were used in domain, but only ASCII letters and numbers are allowed.",
+                list_display(
+                    &bad_chars
+                        .iter()
+                        .map(|c| format!("'{}'", c))
+                        .collect::<Vec<_>>()
+                ),
             ),
-            Self::ReservedPackageName { package_name } => {
-                write!(f, "\"{}\" is reserved and cannot be used", package_name)
-            }
+            Self::ReservedPackageName { package_name } => write!(
+                f,
+                "\"{}\" is a reserved package name in this project and can't be used as a top-level domain.",
+                package_name
+            ),
+            Self::ReservedKeyword { keyword } => write!(
+                f,
+                "\"{}\" is a reserved keyword in java/kotlin and can't be used. For more info, please visit https://kotlinlang.org/docs/reference/keyword-reference.html and https://docs.oracle.com/javase/tutorial/java/nutsandbolts/_keywords.html",
+                keyword
+            ),
             Self::StartsWithDigit { label } => write!(
                 f,
-                "\"{}\" label starts with a digit, which is invalid",
+                "\"{}\" label starts with a digit, which is not allowed in java/kotlin packages.",
                 label
             ),
-            Self::StartsOrEndsWithADot => write!(f, "Domain can't start or end with a dot"),
-            Self::EmptyLabel => write!(f, "Labels cannot be empty"),
+            Self::StartsOrEndsWithADot => write!(f, "Domain can't start or end with a dot."),
+            Self::EmptyLabel => write!(f, "Labels cannot be empty."),
         }
     }
 }
@@ -49,6 +128,11 @@ pub fn check_domain_syntax(domain_name: &str) -> Result<(), DomainError> {
     for label in labels {
         if label.is_empty() {
             return Err(DomainError::EmptyLabel);
+        }
+        if RESERVED_KEYWORDS.contains(&label) {
+            return Err(DomainError::ReservedKeyword {
+                keyword: label.to_owned(),
+            });
         }
         if label.chars().nth(0).unwrap().is_digit(10) {
             return Err(DomainError::StartsWithDigit {
@@ -87,7 +171,8 @@ mod test {
         case("com.example"),
         case("t2900.e1.s709.t1000"),
         case("kotlin.com"),
-        case("java.test")
+        case("java.test"),
+        case("synchronized2.com")
     )]
     fn test_check_domain_syntax_correct(input: &str) {
         assert_eq!(check_domain_syntax(input).unwrap(), ())
@@ -99,6 +184,7 @@ mod test {
         case("", DomainError::Empty {}),
         case(".bad.dot.syntax", DomainError::StartsOrEndsWithADot {}),
         case("com.kotlin", DomainError::ReservedPackageName { package_name: String::from("kotlin") }),
+        case("some.domain.catch.com", DomainError::ReservedKeyword { keyword: String::from("catch") }),
         case("com..empty.label", DomainError::EmptyLabel)
     )]
     fn test_check_domain_syntax_error(input: &str, error: DomainError) {

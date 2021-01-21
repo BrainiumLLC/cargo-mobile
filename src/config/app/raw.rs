@@ -240,7 +240,7 @@ impl Raw {
                 Err(err) => {
                     println!(
                         "{}",
-                        wrapper.fill(&format!("Sorry, {}", err)).bright_magenta()
+                        wrapper.fill(&format!("Sorry! {}", err)).bright_magenta()
                     )
                 }
             }
