@@ -55,13 +55,13 @@ impl Display for Error {
     }
 }
 
-fn xcode_library_dir() -> Result<PathBuf, Error> {
+pub fn xcode_library_dir() -> Result<PathBuf, Error> {
     util::home_dir()
         .map(|home_dir| home_dir.join("Library/Developer/Xcode"))
         .map_err(Error::NoHomeDir)
 }
 
-fn xcode_app_dir() -> Result<PathBuf, Error> {
+pub fn xcode_app_dir() -> Result<PathBuf, Error> {
     use std::os::unix::ffi::OsStrExt as _;
     let output = bossy::Command::impure("xcode-select")
         .with_arg("-p")
@@ -75,7 +75,7 @@ fn xcode_app_dir() -> Result<PathBuf, Error> {
 }
 
 // Step 1: check if installed and up-to-date
-fn check_plugin(
+pub fn check_plugin(
     reinstall_deps: opts::ReinstallDeps,
     xcode_version: (u32, u32),
     repo: &Repo,

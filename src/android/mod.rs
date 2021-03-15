@@ -1,4 +1,4 @@
-mod adb;
+pub(crate) mod adb;
 pub mod cli;
 pub(crate) mod config;
 mod device;

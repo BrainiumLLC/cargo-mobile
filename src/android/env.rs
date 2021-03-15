@@ -103,6 +103,10 @@ impl Env {
     pub fn path(&self) -> &str {
         self.base.path()
     }
+
+    pub fn sdk_root(&self) -> &str {
+        self.sdk_root.as_path().to_str().unwrap()
+    }
 }
 
 impl ExplicitEnv for Env {

@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 
 use cargo_mobile::{
-    init, opts, update,
+    doctor, init, opts, update,
     util::{
         self,
         cli::{
@@ -68,6 +68,11 @@ pub enum Command {
         about = "Android commands (tip: type less by running `cargo android` instead!)"
     )]
     Android(cargo_mobile::android::cli::Command),
+    #[structopt(
+        name = "doctor",
+        about = "Perform a check-up on cargo mobile's dependencies"
+    )]
+    Doctor,
 }
 
 #[derive(Debug)]
@@ -148,6 +153,10 @@ impl Exec for Input {
             Command::Android(command) => cargo_mobile::android::cli::Input::new(flags, command)
                 .exec(wrapper)
                 .map_err(Error::AndroidFailed),
+            Command::Doctor => {
+                doctor::exec().unwrap().print(wrapper);
+                Ok(())
+            }
         }
     }
 }
