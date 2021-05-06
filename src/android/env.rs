@@ -1,36 +1,25 @@
 use super::ndk;
 use crate::{
     env::{Env as CoreEnv, Error as CoreError, ExplicitEnv},
-    util::cli::{Report, Reportable},
+    util::{
+        self,
+        cli::{Report, Reportable},
+    },
 };
-use std::{
-    fmt::{self, Display},
-    path::PathBuf,
-};
+use std::path::{Path, PathBuf};
+use thiserror::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum Error {
-    CoreEnvError(CoreError),
+    #[error(transparent)]
+    CoreEnvError(#[from] CoreError),
     // TODO: we should be nice and provide a platform-specific suggestion
-    AndroidSdkRootNotSet(std::env::VarError),
+    #[error("Have you installed the Android SDK? The `ANDROID_SDK_ROOT` environment variable isn't set, and is required: {0}")]
+    AndroidSdkRootNotSet(#[from] std::env::VarError),
+    #[error("Have you installed the Android SDK? The `ANDROID_SDK_ROOT` environment variable is set, but doesn't point to an existing directory.")]
     AndroidSdkRootNotADir,
-    NdkEnvError(ndk::Error),
-}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::CoreEnvError(err) => write!(f, "{}", err),
-            Self::AndroidSdkRootNotSet(err) => {
-                write!(f, "Have you installed the Android SDK? The `ANDROID_SDK_ROOT` environment variable isn't set, and is required: {}", err)
-            }
-            Self::AndroidSdkRootNotADir => write!(
-                f,
-                "Have you installed the Android SDK? The `ANDROID_SDK_ROOT` environment variable is set, but doesn't point to an existing directory."
-            ),
-            Self::NdkEnvError(err) => write!(f, "{}", err),
-        }
-    }
+    #[error(transparent)]
+    NdkEnvError(#[from] ndk::Error),
 }
 
 impl Reportable for Error {
@@ -49,6 +38,30 @@ impl Error {
     }
 }
 
+#[derive(Debug, Error)]
+pub enum VersionError {
+    #[error("Failed to open {path:?}: {source}")]
+    OpenFailed {
+        path: PathBuf,
+        source: std::io::Error,
+    },
+    #[error("Failed to parse {path:?}: {source}")]
+    ParseFailed {
+        path: PathBuf,
+        source: java_properties::PropertiesError,
+    },
+    #[error("No version number was present in {path:?}.")]
+    VersionMissing { path: PathBuf },
+    #[error("Properties at {path:?} contained a version component {component:?} that wasn't a valid number: {source}")]
+    ComponentNotNumerical {
+        path: PathBuf,
+        component: String,
+        source: std::num::ParseIntError,
+    },
+    #[error("Version {version:?} in properties file {path:?} didn't have as many components as expected.")]
+    TooFewComponents { path: PathBuf, version: String },
+}
+
 #[derive(Debug)]
 pub struct Env {
     base: CoreEnv,
@@ -58,7 +71,7 @@ pub struct Env {
 
 impl Env {
     pub fn new() -> Result<Self, Error> {
-        let base = CoreEnv::new().map_err(Error::CoreEnvError)?;
+        let base = CoreEnv::new()?;
         let sdk_root = std::env::var("ANDROID_SDK_ROOT")
             .map_err(Error::AndroidSdkRootNotSet)
             .map(PathBuf::from)
@@ -96,7 +109,7 @@ impl Env {
         Ok(Self {
             base,
             sdk_root,
-            ndk: ndk::Env::new().map_err(Error::NdkEnvError)?,
+            ndk: ndk::Env::new()?,
         })
     }
 
@@ -106,6 +119,49 @@ impl Env {
 
     pub fn sdk_root(&self) -> &str {
         self.sdk_root.as_path().to_str().unwrap()
+    }
+
+    // TODO: factor out the logic shared with `Ndk::version`
+    pub fn sdk_version(&self) -> Result<util::VersionTriple, VersionError> {
+        let path = Path::new(self.sdk_root()).join("tools/source.properties");
+        let props = {
+            let file = std::fs::File::open(&path).map_err(|source| VersionError::OpenFailed {
+                path: path.clone(),
+                source,
+            })?;
+            java_properties::read(file).map_err(|source| VersionError::ParseFailed {
+                path: path.clone(),
+                source,
+            })?
+        };
+        let revision = props
+            .get("Pkg.Revision")
+            .ok_or_else(|| VersionError::VersionMissing { path: path.clone() })?;
+        let components = revision
+            .split('.')
+            .take(3)
+            .map(|component| {
+                component
+                    .parse::<u32>()
+                    .map_err(|source| VersionError::ComponentNotNumerical {
+                        path: path.clone(),
+                        component: component.to_owned(),
+                        source,
+                    })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        if components.len() == 3 {
+            Ok(util::VersionTriple {
+                major: components[0],
+                minor: components[1],
+                patch: components[2],
+            })
+        } else {
+            Err(VersionError::TooFewComponents {
+                path,
+                version: revision.to_owned(),
+            })
+        }
     }
 }
 

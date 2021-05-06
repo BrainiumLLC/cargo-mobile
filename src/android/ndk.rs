@@ -1,12 +1,10 @@
-use super::target::Target;
+use super::{env::VersionError, target::Target};
 use crate::util::cli::{Report, Reportable};
 use once_cell_regex::regex_multi_line;
 use std::{
     collections::HashSet,
     fmt::{self, Display},
     fs::File,
-    io,
-    num::ParseIntError,
     path::{Path, PathBuf},
 };
 use thiserror::Error;
@@ -98,56 +96,6 @@ impl MissingToolError {
     }
 }
 
-#[derive(Debug)]
-pub enum VersionError {
-    OpenFailed {
-        path: PathBuf,
-        cause: io::Error,
-    },
-    ParseFailed {
-        path: PathBuf,
-        cause: java_properties::PropertiesError,
-    },
-    VersionMissing {
-        path: PathBuf,
-    },
-    ComponentNotNumerical {
-        path: PathBuf,
-        component: String,
-        cause: ParseIntError,
-    },
-    TooFewComponents {
-        path: PathBuf,
-        version: String,
-    },
-}
-
-impl Display for VersionError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::OpenFailed { path, cause } => {
-                write!(f, "Failed to open {:?}: {}", path, cause)
-            }
-            Self::ParseFailed { path, cause } => {
-                write!(f, "Failed to parse {:?}: {}", path, cause)
-            }
-            Self::VersionMissing { path } =>{
-                write!(f, "No version number was present in {:?}.", path)
-            }
-            Self::ComponentNotNumerical { path, component, cause } => write!(
-                f,
-                "Properties at {:?} contained a version component {:?} that wasn't a valid number: {}",
-                path, component, cause
-            ),
-            Self::TooFewComponents { path, version } => write!(
-                f,
-                "Version {:?} in properties file {:?} didn't have as many components as expected.",
-                path, version
-            ),
-        }
-    }
-}
-
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Version {
     major: u32,
@@ -171,41 +119,20 @@ impl Display for Version {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum Error {
     // TODO: link to docs/etc.
-    NdkHomeNotSet(std::env::VarError),
+    #[error("Have you installed the NDK? The `NDK_HOME` environment variable isn't set, and is required: {0}")]
+    NdkHomeNotSet(#[from] std::env::VarError),
+    #[error("Have you installed the NDK? The `NDK_HOME` environment variable is set, but doesn't point to an existing directory.")]
     NdkHomeNotADir,
-    VersionLookupFailed(VersionError),
+    #[error("Failed to lookup version of installed NDK: {0}")]
+    VersionLookupFailed(#[from] VersionError),
+    #[error("At least NDK {you_need} is required (you currently have NDK {you_have})")]
     VersionTooLow {
         you_have: Version,
         you_need: Version,
     },
-}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::NdkHomeNotSet(err) => write!(
-                f,
-                "Have you installed the NDK? The `NDK_HOME` environment variable isn't set, and is required: {}",
-                err,
-            ),
-            Self::NdkHomeNotADir => write!(
-                f,
-                "Have you installed the NDK? The `NDK_HOME` environment variable is set, but doesn't point to an existing directory."
-            ),
-            Self::VersionLookupFailed(err) => {
-                write!(f, "Failed to lookup version of installed NDK: {}", err)
-            }
-            Self::VersionTooLow { you_have, you_need } => write!(
-                f,
-                "At least NDK {} is required (you currently have NDK {})",
-                you_need,
-                you_have,
-            ),
-        }
-    }
 }
 
 impl Reportable for Error {
@@ -265,13 +192,13 @@ impl Env {
 
     pub fn version(&self) -> Result<Version, VersionError> {
         let path = self.ndk_home.join("source.properties");
-        let file = File::open(&path).map_err(|cause| VersionError::OpenFailed {
+        let file = File::open(&path).map_err(|source| VersionError::OpenFailed {
             path: path.clone(),
-            cause,
+            source,
         })?;
-        let props = java_properties::read(file).map_err(|cause| VersionError::ParseFailed {
+        let props = java_properties::read(file).map_err(|source| VersionError::ParseFailed {
             path: path.clone(),
-            cause,
+            source,
         })?;
         let revision = props
             .get("Pkg.Revision")
@@ -286,10 +213,10 @@ impl Env {
             .map(|component| {
                 component
                     .parse::<u32>()
-                    .map_err(|cause| VersionError::ComponentNotNumerical {
+                    .map_err(|source| VersionError::ComponentNotNumerical {
                         path: path.clone(),
                         component: component.to_owned(),
-                        cause,
+                        source,
                     })
             })
             .collect::<Result<Vec<_>, _>>()?;

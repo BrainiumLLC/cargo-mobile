@@ -74,6 +74,30 @@ pub fn host_target_triple() -> Result<String, HostTargetTripleError> {
     .map_err(HostTargetTripleError::CommandFailed)
 }
 
+// Generic version triple
+#[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub struct VersionTriple {
+    pub major: u32,
+    pub minor: u32,
+    pub patch: u32,
+}
+
+impl Display for VersionTriple {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
+    }
+}
+
+impl VersionTriple {
+    pub const fn new(major: u32, minor: u32, patch: u32) -> Self {
+        Self {
+            major,
+            minor,
+            patch,
+        }
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum RustVersionError {
     #[error("Failed to check rustc version: {0}")]
@@ -130,7 +154,7 @@ pub struct RustVersionDetails {
 
 #[derive(Debug)]
 pub struct RustVersion {
-    pub triple: (u32, u32, u32),
+    pub triple: VersionTriple,
     pub flavor: Option<RustVersionFlavor>,
     /// This section can be absent if Rust is installed using something other
     /// than `rustup` (i.e. Homebrew)
@@ -139,7 +163,7 @@ pub struct RustVersion {
 
 impl Display for RustVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}.{}.{}", self.triple.0, self.triple.1, self.triple.2)?;
+        write!(f, "{}", self.triple)?;
         if let Some(flavor) = &self.flavor {
             write!(f, "-{}", flavor.flavor)?;
             if let Some(candidate) = &flavor.candidate {
@@ -180,11 +204,11 @@ impl RustVersion {
             |_text, caps| {
                 let version_str = &caps["version"];
                 let this = Self {
-                    triple: (
-                        parse!("major", MajorInvalid, version)(&caps, version_str)?,
-                        parse!("minor", MinorInvalid, version)(&caps, version_str)?,
-                        parse!("patch", PatchInvalid, version)(&caps, version_str)?,
-                    ),
+                    triple: VersionTriple {
+                        major: parse!("major", MajorInvalid, version)(&caps, version_str)?,
+                        minor: parse!("minor", MinorInvalid, version)(&caps, version_str)?,
+                        patch: parse!("patch", PatchInvalid, version)(&caps, version_str)?,
+                    },
                     flavor: caps.name("flavor").map(|flavor| RustVersionFlavor {
                         flavor: flavor.as_str().to_owned(),
                         candidate: caps
@@ -214,8 +238,8 @@ impl RustVersion {
 
     pub fn valid(&self) -> bool {
         if cfg!(target_os = "macos") {
-            const LAST_GOOD_STABLE: (u32, u32, u32) = (1, 45, 2);
-            const NEXT_GOOD_STABLE: (u32, u32, u32) = (1, 49, 0);
+            const LAST_GOOD_STABLE: VersionTriple = VersionTriple::new(1, 45, 2);
+            const NEXT_GOOD_STABLE: VersionTriple = VersionTriple::new(1, 49, 0);
             const FIRST_GOOD_NIGHTLY: (u32, u32, u32) = (2020, 10, 24);
 
             let old_good = self.triple <= LAST_GOOD_STABLE;
@@ -362,5 +386,15 @@ pub fn installed_commit_msg() -> Result<Option<String>, InstalledCommitMsgError>
             .map_err(|source| InstalledCommitMsgError::ReadFailed { path, source })
     } else {
         Ok(None)
+    }
+}
+
+pub fn format_commit_msg(msg: String) -> String {
+    format!("Contains commits up to {:?}", msg)
+}
+
+pub fn unwrap_either<T>(result: Result<T, T>) -> T {
+    match result {
+        Ok(t) | Err(t) => t,
     }
 }

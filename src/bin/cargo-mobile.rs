@@ -1,7 +1,8 @@
 #![forbid(unsafe_code)]
 
 use cargo_mobile::{
-    doctor, init, opts, update,
+    doctor::Doctor,
+    init, opts, update,
     util::{
         self,
         cli::{
@@ -154,7 +155,7 @@ impl Exec for Input {
                 .exec(wrapper)
                 .map_err(Error::AndroidFailed),
             Command::Doctor => {
-                doctor::exec().unwrap().print(wrapper);
+                Doctor::check().print(wrapper);
                 Ok(())
             }
         }
