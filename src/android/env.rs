@@ -71,7 +71,10 @@ pub struct Env {
 
 impl Env {
     pub fn new() -> Result<Self, Error> {
-        let base = CoreEnv::new()?;
+        Self::from_env(CoreEnv::new()?)
+    }
+
+    pub fn from_env(base: CoreEnv) -> Result<Self, Error> {
         let sdk_root = std::env::var("ANDROID_SDK_ROOT")
             .map_err(Error::AndroidSdkRootNotSet)
             .map(PathBuf::from)

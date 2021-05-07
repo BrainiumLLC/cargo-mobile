@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 
 use cargo_mobile::{
-    doctor::Doctor,
+    doctor::{self, Doctor},
     init, opts, update,
     util::{
         self,
@@ -84,6 +84,7 @@ pub enum Error {
     #[cfg(target_os = "macos")]
     AppleFailed(cargo_mobile::apple::cli::Error),
     AndroidFailed(cargo_mobile::android::cli::Error),
+    DoctorFailed(doctor::Unrecoverable),
 }
 
 impl Reportable for Error {
@@ -97,6 +98,7 @@ impl Reportable for Error {
             #[cfg(target_os = "macos")]
             Self::AppleFailed(err) => err.report(),
             Self::AndroidFailed(err) => err.report(),
+            Self::DoctorFailed(err) => Report::error("Failed to run doctor", err),
         }
     }
 }
@@ -154,10 +156,9 @@ impl Exec for Input {
             Command::Android(command) => cargo_mobile::android::cli::Input::new(flags, command)
                 .exec(wrapper)
                 .map_err(Error::AndroidFailed),
-            Command::Doctor => {
-                Doctor::check().print(wrapper);
-                Ok(())
-            }
+            Command::Doctor => Doctor::check()
+                .map(|doctor| doctor.print(wrapper))
+                .map_err(Error::DoctorFailed),
         }
     }
 }

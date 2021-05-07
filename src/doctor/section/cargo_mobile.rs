@@ -1,5 +1,8 @@
 use super::{Item, Section};
-use crate::util::{self, cli::VERSION_SHORT};
+use crate::{
+    doctor::Unrecoverable,
+    util::{self, cli::VERSION_SHORT},
+};
 use once_cell_regex::regex;
 
 #[cfg(target_os = "macos")]
@@ -35,33 +38,27 @@ fn check_rust() -> Result<String, String> {
         })
 }
 
-pub fn check() -> Section {
+pub fn check() -> Result<Section, Unrecoverable> {
     let section = Section::new(format!("cargo-mobile {}", VERSION_SHORT));
-    match util::install_dir() {
+    Ok(match util::install_dir() {
         Ok(install_dir) => section
             .with_item(util::installed_commit_msg().map(|msg| {
                 msg.map(util::format_commit_msg)
                     .unwrap_or_else(|| "Installed commit message isn't present".to_string())
             }))
-            // TODO: don't unwrap here
-            .with_item(
-                install_dir
-                    .exists()
-                    .then(|| {
-                        format!(
-                            "Installed at {:?}",
-                            util::contract_home(&install_dir).unwrap()
-                        )
-                    })
-                    .ok_or_else(|| {
-                        format!(
-                            "The cargo-mobile installation directory is missing! Checked at {:?}",
-                            install_dir.to_str().unwrap()
-                        )
-                    }),
-            ),
+            .with_item(if install_dir.exists() {
+                Ok(format!(
+                    "Installed at {:?}",
+                    util::contract_home(&install_dir)?,
+                ))
+            } else {
+                Err(format!(
+                    "The cargo-mobile installation directory is missing! Checked at {:?}",
+                    install_dir,
+                ))
+            }),
         Err(err) => section.with_failure(err),
     }
     .with_item(check_os())
-    .with_item(check_rust())
+    .with_item(check_rust()))
 }

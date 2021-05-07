@@ -4,22 +4,20 @@ use crate::{
     env::Env,
 };
 
-pub fn check() -> Section {
+pub fn check(env: &Env) -> Section {
     let section = Section::new("Connected devices");
 
     #[cfg(target_os = "macos")]
     let section = {
         use crate::apple::ios_deploy;
-        // TODO: don't unwrap
-        let env = Env::new().unwrap();
-        match ios_deploy::device_list(&env) {
+        match ios_deploy::device_list(env) {
             Ok(list) => section.with_victories(list),
             Err(err) => section.with_failure(format!("Failed to get iOS device list: {}", err)),
         }
     };
 
-    let section = if let Ok(env) = android::env::Env::new() {
-        match adb::device_list(&env) {
+    let section = if let Ok(android_env) = android::env::Env::from_env(env.clone()) {
+        match adb::device_list(&android_env) {
             Ok(list) => section.with_victories(list),
             Err(err) => section.with_failure(format!("Failed to get Android device list: {}", err)),
         }

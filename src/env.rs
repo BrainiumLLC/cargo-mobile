@@ -20,7 +20,7 @@ impl Reportable for Error {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Env {
     home: String,
     path: String,

@@ -1,34 +1,28 @@
 use super::Section;
-use crate::{android::env::Env, util};
+use crate::{android, doctor::Unrecoverable, env::Env, util};
 
-pub fn check() -> Section {
+pub fn check(env: &Env) -> Result<Section, Unrecoverable> {
     let section = Section::new("Android developer tools");
-    match Env::new() {
-        Ok(env) => section
-            .with_item(
-                env.sdk_version()
-                    .map(|sdk_version| {
-                        format!(
-                            "SDK v{} installed at {:?}",
-                            sdk_version,
-                            // TODO: don't unwrap this (...though it's basically fatal anyway)
-                            util::contract_home(env.sdk_root()).unwrap(),
-                        )
-                    })
-                    .map_err(|err| format!("Failed to get SDK version: {}", err)),
-            )
-            .with_item(
-                env.ndk
-                    .version()
-                    .map(|ndk_version| {
-                        format!(
-                            "NDK {} installed at {:?}",
-                            ndk_version,
-                            util::contract_home(env.ndk.home()).unwrap(),
-                        )
-                    })
-                    .map_err(|err| format!("Failed to get NDK version: {}", err)),
-            ),
+    Ok(match android::env::Env::from_env(env.clone()) {
+        Ok(android_env) => section
+            // It'd be a bit too inconvenient to use `map` here, since we need
+            // to use `?` within the closures...
+            .with_item(match android_env.sdk_version() {
+                Ok(sdk_version) => Ok(format!(
+                    "SDK v{} installed at {:?}",
+                    sdk_version,
+                    util::contract_home(android_env.sdk_root())?,
+                )),
+                Err(err) => Err(format!("Failed to get SDK version: {}", err)),
+            })
+            .with_item(match android_env.ndk.version() {
+                Ok(ndk_version) => Ok(format!(
+                    "NDK {} installed at {:?}",
+                    ndk_version,
+                    util::contract_home(android_env.ndk.home())?,
+                )),
+                Err(err) => Err(format!("Failed to get NDK version: {}", err)),
+            }),
         Err(err) => section.with_failure(err),
-    }
+    })
 }
