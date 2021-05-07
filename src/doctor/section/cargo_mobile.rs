@@ -1,4 +1,4 @@
-use super::{Error, Item, Section};
+use super::{Item, Section};
 use crate::util::{self, cli::VERSION_SHORT};
 use once_cell_regex::regex;
 
@@ -19,40 +19,48 @@ fn check_os() -> Item {
     todo!()
 }
 
-fn check_rust() -> Item {
-    match util::RustVersion::check() {
-        Ok(version) => {
-            if version.valid() {
-                Item::victory(format!("rustc v{}", version.to_string()))
-            } else {
-                Item::failure(Error::RustVersionInvalid { version })
-            }
-        }
-        Err(err) => Item::failure(err),
-    }
+fn check_rust() -> Result<String, String> {
+    util::RustVersion::check()
+        .map_err(|err| err.to_string())
+        .and_then(|version| {
+            version
+                .valid()
+                .then(|| format!("rustc v{}", version.to_string()))
+                .ok_or_else(|| {
+                    format!(
+                        "iOS linking is broken on rustc v{}; please update to 1.49.0 or later",
+                        version
+                    )
+                })
+        })
 }
 
 pub fn check() -> Section {
     let section = Section::new(format!("cargo-mobile {}", VERSION_SHORT));
     match util::install_dir() {
         Ok(install_dir) => section
-            .with_item(match util::installed_commit_msg().transpose() {
-                Some(result) => Item::from_result(result.map(util::format_commit_msg)),
-                None => Item::victory("Installed commit message isn't present"),
-            })
-            .with_item(if install_dir.exists() {
-                // TODO: don't unwrap here
-                Item::victory(format!(
-                    "Installed at {:?}",
-                    util::contract_home(install_dir).unwrap()
-                ))
-            } else {
-                Item::failure(format!(
-                    "The cargo-mobile installation directory is missing! Checked at {:?}",
-                    install_dir.to_str().unwrap()
-                ))
-            }),
-        Err(err) => section.with_item(Item::failure(err)),
+            .with_item(util::installed_commit_msg().map(|msg| {
+                msg.map(util::format_commit_msg)
+                    .unwrap_or_else(|| "Installed commit message isn't present".to_string())
+            }))
+            // TODO: don't unwrap here
+            .with_item(
+                install_dir
+                    .exists()
+                    .then(|| {
+                        format!(
+                            "Installed at {:?}",
+                            util::contract_home(&install_dir).unwrap()
+                        )
+                    })
+                    .ok_or_else(|| {
+                        format!(
+                            "The cargo-mobile installation directory is missing! Checked at {:?}",
+                            install_dir.to_str().unwrap()
+                        )
+                    }),
+            ),
+        Err(err) => section.with_failure(err),
     }
     .with_item(check_os())
     .with_item(check_rust())

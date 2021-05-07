@@ -10,29 +10,6 @@ use crate::util::{
 };
 use colored::Colorize as _;
 use std::fmt::Debug;
-use thiserror::Error;
-
-fn command(command: &str) -> Result<String, Error> {
-    bossy::Command::impure_parse(command)
-        .run_and_wait_for_str(|s| s.trim_end().to_owned())
-        .map_err(Error::from)
-}
-
-#[derive(Debug, Error)]
-enum Error {
-    #[error("Failed to check installed macOS version")]
-    OsCheckFailed(#[from] bossy::Error),
-    #[error("Output contained invalid UTF-8: {0}")]
-    InvalidUtf8(#[from] std::str::Utf8Error),
-    #[error("Environment variable not set.")]
-    VarError(#[from] std::env::VarError),
-    #[error(transparent)]
-    CommandSearchFailed(#[from] util::RunAndSearchError),
-    #[error("iOS linking is broken on Rust versions later than 1.45.2 (d3fb005a3 2020-07-31) and earlier than 1.49.0-nightly (ffa2e7ae8 2020-10-24), but you're on {version}!\n    - Until this is resolved by Rust 1.49.0, please do one of the following:\n        A) downgrade to 1.45.2:\n           `rustup install stable-2020-08-03 && rustup default stable-2020-08-03`\n        B) update to a recent nightly:\n           `rustup update nightly && rustup default nightly`")]
-    RustVersionInvalid { version: util::RustVersion },
-    #[error("Commit message error")]
-    InstalledCommitMsgFailed(#[from] util::InstalledCommitMsgError),
-}
 
 #[derive(Clone, Copy, Debug)]
 enum Label {
@@ -85,6 +62,12 @@ struct Item {
     msg: String,
 }
 
+impl<T: ToString, E: ToString> From<Result<T, E>> for Item {
+    fn from(result: Result<T, E>) -> Item {
+        Self::from_result(result)
+    }
+}
+
 impl Item {
     fn new(label: Label, msg: impl ToString) -> Self {
         Self {
@@ -105,12 +88,8 @@ impl Item {
         Self::new(Label::Error, msg)
     }
 
-    fn from_result(result: Result<impl ToString, impl Into<Error>>) -> Self {
-        util::unwrap_either(
-            result
-                .map(Self::victory)
-                .map_err(|err| Self::failure(err.into())),
-        )
+    fn from_result(result: Result<impl ToString, impl ToString>) -> Self {
+        util::unwrap_either(result.map(Self::victory).map_err(Self::failure))
     }
 
     fn is_warning(&self) -> bool {
@@ -133,31 +112,33 @@ pub struct Section {
 }
 
 impl Section {
-    fn new(title: impl Into<String>) -> Self {
+    fn new(title: impl ToString) -> Self {
         Self {
-            title: title.into(),
+            title: title.to_string(),
             items: Default::default(),
         }
     }
 
-    fn add_item(&mut self, item: Item) -> &mut Self {
-        self.items.push(item);
+    fn with_item(mut self, item: impl Into<Item>) -> Self {
+        self.items.push(item.into());
         self
     }
 
-    fn with_item(mut self, item: Item) -> Self {
-        self.add_item(item);
+    fn with_victory(self, victory: impl ToString) -> Self {
+        self.with_item(Item::victory(victory))
+    }
+
+    fn with_failure(self, failure: impl ToString) -> Self {
+        self.with_item(Item::failure(failure))
+    }
+
+    fn with_items(mut self, items: impl IntoIterator<Item = impl Into<Item>>) -> Self {
+        self.items.extend(items.into_iter().map(Into::into));
         self
     }
 
-    fn add_items(&mut self, items: impl IntoIterator<Item = Item>) -> &mut Self {
-        self.items.extend(items);
-        self
-    }
-
-    fn with_items(mut self, items: impl IntoIterator<Item = Item>) -> Self {
-        self.add_items(items);
-        self
+    fn with_victories(self, victories: impl IntoIterator<Item = impl ToString>) -> Self {
+        self.with_items(victories.into_iter().map(Item::victory))
     }
 
     pub fn is_empty(&self) -> bool {
