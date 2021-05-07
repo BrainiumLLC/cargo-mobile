@@ -21,10 +21,7 @@ pub fn check() -> Section {
     let section = if let Ok(env) = android::env::Env::new() {
         match adb::device_list(&env) {
             Ok(list) => section.with_victories(list),
-            // TODO: impl Display for this error
-            Err(err) => {
-                section.with_failure(format!("Failed to get Android device list: {:?}", err))
-            }
+            Err(err) => section.with_failure(format!("Failed to get Android device list: {}", err)),
         }
     } else {
         section
