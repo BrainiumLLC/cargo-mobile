@@ -171,7 +171,7 @@ impl Section {
             .initial_indent(BULLET_INDENT)
             .subsequent_indent(HANGING_INDENT);
         println!(
-            "{}",
+            "\n{}",
             // The `.to_string()` at the end is necessary for the color/bold to
             // actually show - otherwise, the colored string just `AsRef`s to
             // satisfy `TextWrapper::fill` and the formatting is left behind.

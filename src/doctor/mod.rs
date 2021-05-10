@@ -1,6 +1,5 @@
 mod section;
 
-use self::section::Section;
 use crate::{
     env::{self, Env},
     util::{self, cli::TextWrapper},
@@ -21,29 +20,12 @@ pub enum Unrecoverable {
     ContractHomeFailed(#[from] util::ContractHomeError),
 }
 
-#[derive(Debug)]
-pub struct Doctor {
-    sections: Vec<Section>,
-}
-
-impl Doctor {
-    pub fn check() -> Result<Self, Unrecoverable> {
-        let env = Env::new()?;
-        Ok(Self {
-            sections: vec![
-                section::cargo_mobile::check()?,
-                #[cfg(target_os = "macos")]
-                section::apple::check(),
-                section::android::check(&env)?,
-                section::device_list::check(&env),
-            ],
-        })
-    }
-
-    pub fn print(&self, wrapper: &TextWrapper) {
-        for section in &self.sections {
-            println!();
-            section.print(wrapper);
-        }
-    }
+pub fn exec(wrapper: &TextWrapper) -> Result<(), Unrecoverable> {
+    let env = Env::new()?;
+    section::cargo_mobile::check()?.print(wrapper);
+    #[cfg(target_os = "macos")]
+    section::apple::check().print(wrapper);
+    section::android::check(&env)?.print(wrapper);
+    section::device_list::check(&env).print(wrapper);
+    Ok(())
 }
