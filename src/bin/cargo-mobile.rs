@@ -70,7 +70,7 @@ pub enum Command {
     Android(cargo_mobile::android::cli::Command),
     #[structopt(
         name = "doctor",
-        about = "Perform a check-up on cargo mobile's dependencies"
+        about = "Perform a check-up on your installation and environment"
     )]
     Doctor,
 }
