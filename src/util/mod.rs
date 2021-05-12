@@ -74,6 +74,36 @@ pub fn host_target_triple() -> Result<String, HostTargetTripleError> {
     .map_err(HostTargetTripleError::CommandFailed)
 }
 
+#[derive(Debug, Error)]
+pub enum VersionTripleError {
+    #[error("Failed to parse major version from {version:?}: {source}")]
+    MajorInvalid {
+        version: String,
+        source: std::num::ParseIntError,
+    },
+    #[error("Failed to parse minor version from {version:?}: {source}")]
+    MinorInvalid {
+        version: String,
+        source: std::num::ParseIntError,
+    },
+    #[error("Failed to parse patch version from {version:?}: {source}")]
+    PatchInvalid {
+        version: String,
+        source: std::num::ParseIntError,
+    },
+}
+
+macro_rules! parse {
+    ($key:expr, $err:ident, $variant:ident, $field:ident) => {
+        |caps: &Captures<'_>, context: &str| {
+            caps[$key].parse::<u32>().map_err(|source| $err::$variant {
+                $field: context.to_owned(),
+                source,
+            })
+        }
+    };
+}
+
 // Generic version triple
 #[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct VersionTriple {
@@ -96,27 +126,35 @@ impl VersionTriple {
             patch,
         }
     }
+
+    pub fn from_caps<'a>(caps: &'a Captures<'a>) -> Result<(Self, &'a str), VersionTripleError> {
+        let version_str = &caps["version"];
+        Ok((
+            Self {
+                major: parse!("major", VersionTripleError, MajorInvalid, version)(
+                    &caps,
+                    version_str,
+                )?,
+                minor: parse!("minor", VersionTripleError, MinorInvalid, version)(
+                    &caps,
+                    version_str,
+                )?,
+                patch: parse!("patch", VersionTripleError, PatchInvalid, version)(
+                    &caps,
+                    version_str,
+                )?,
+            },
+            version_str,
+        ))
+    }
 }
 
 #[derive(Debug, Error)]
 pub enum RustVersionError {
     #[error("Failed to check rustc version: {0}")]
     CommandFailed(#[from] RunAndSearchError),
-    #[error("Failed to parse rustc major version from {version:?}: {source}")]
-    MajorInvalid {
-        version: String,
-        source: std::num::ParseIntError,
-    },
-    #[error("Failed to parse rustc minor version from {version:?}: {source}")]
-    MinorInvalid {
-        version: String,
-        source: std::num::ParseIntError,
-    },
-    #[error("Failed to parse rustc patch version from {version:?}: {source}")]
-    PatchInvalid {
-        version: String,
-        source: std::num::ParseIntError,
-    },
+    #[error(transparent)]
+    TripleInvalid(#[from] VersionTripleError),
     #[error("Failed to parse rustc release year from {date:?}: {source}")]
     YearInvalid {
         date: String,
@@ -183,32 +221,15 @@ impl Display for RustVersion {
 
 impl RustVersion {
     pub fn check() -> Result<Self, RustVersionError> {
-        macro_rules! parse {
-            ($key:expr, $var:ident, $field:ident) => {
-                |caps: &Captures<'_>, context: &str| {
-                    caps[$key]
-                        .parse::<u32>()
-                        .map_err(|source| RustVersionError::$var {
-                            $field: context.to_owned(),
-                            source,
-                        })
-                }
-            };
-        }
-
         run_and_search(
             &mut bossy::Command::impure_parse("rustc --version"),
             regex!(
                 r"rustc (?P<version>(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)(-(?P<flavor>\w+)(.(?P<candidate>\d+))?)?)(?P<details> \((?P<hash>\w{9}) (?P<date>(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2}))\))?"
             ),
             |_text, caps| {
-                let version_str = &caps["version"];
+                let (triple, _version_str) = VersionTriple::from_caps(&caps)?;
                 let this = Self {
-                    triple: VersionTriple {
-                        major: parse!("major", MajorInvalid, version)(&caps, version_str)?,
-                        minor: parse!("minor", MinorInvalid, version)(&caps, version_str)?,
-                        patch: parse!("patch", PatchInvalid, version)(&caps, version_str)?,
-                    },
+                    triple,
                     flavor: caps.name("flavor").map(|flavor| RustVersionFlavor {
                         flavor: flavor.as_str().to_owned(),
                         candidate: caps
@@ -222,9 +243,15 @@ impl RustVersion {
                             Ok(RustVersionDetails {
                                 hash: caps["hash"].to_owned(),
                                 date: (
-                                    parse!("year", YearInvalid, date)(&caps, date_str)?,
-                                    parse!("month", MonthInvalid, date)(&caps, date_str)?,
-                                    parse!("day", DayInvalid, date)(&caps, date_str)?,
+                                    parse!("year", RustVersionError, YearInvalid, date)(
+                                        &caps, date_str,
+                                    )?,
+                                    parse!("month", RustVersionError, MonthInvalid, date)(
+                                        &caps, date_str,
+                                    )?,
+                                    parse!("day", RustVersionError, DayInvalid, date)(
+                                        &caps, date_str,
+                                    )?,
                                 ),
                             })
                         })

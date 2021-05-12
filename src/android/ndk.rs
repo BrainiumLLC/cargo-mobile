@@ -1,15 +1,17 @@
-use super::{env::VersionError, target::Target};
+use super::{
+    source_props::{self, SourceProps},
+    target::Target,
+};
 use crate::util::cli::{Report, Reportable};
 use once_cell_regex::regex_multi_line;
 use std::{
     collections::HashSet,
     fmt::{self, Display},
-    fs::File,
     path::{Path, PathBuf},
 };
 use thiserror::Error;
 
-const MIN_NDK_VERSION: Version = Version {
+const MIN_NDK_VERSION: ShortVersion = ShortVersion {
     major: 19,
     minor: 0,
 };
@@ -97,12 +99,12 @@ impl MissingToolError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub struct Version {
+pub struct ShortVersion {
     major: u32,
     minor: u32,
 }
 
-impl Display for Version {
+impl Display for ShortVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "r{}", self.major)?;
         if self.minor != 0 {
@@ -119,6 +121,15 @@ impl Display for Version {
     }
 }
 
+impl From<source_props::Revision> for ShortVersion {
+    fn from(revision: source_props::Revision) -> Self {
+        Self {
+            major: revision.triple.major,
+            minor: revision.triple.minor,
+        }
+    }
+}
+
 #[derive(Debug, Error)]
 pub enum Error {
     // TODO: link to docs/etc.
@@ -127,11 +138,11 @@ pub enum Error {
     #[error("Have you installed the NDK? The `NDK_HOME` environment variable is set, but doesn't point to an existing directory.")]
     NdkHomeNotADir,
     #[error("Failed to lookup version of installed NDK: {0}")]
-    VersionLookupFailed(#[from] VersionError),
+    VersionLookupFailed(#[from] source_props::Error),
     #[error("At least NDK {you_need} is required (you currently have NDK {you_have})")]
     VersionTooLow {
-        you_have: Version,
-        you_need: Version,
+        you_have: ShortVersion,
+        you_need: ShortVersion,
     },
 }
 
@@ -175,7 +186,10 @@ impl Env {
                 }
             })?;
         let env = Self { ndk_home };
-        let version = env.version().map_err(Error::VersionLookupFailed)?;
+        let version = env
+            .version()
+            .map(ShortVersion::from)
+            .map_err(Error::VersionLookupFailed)?;
         if version >= MIN_NDK_VERSION {
             Ok(env)
         } else {
@@ -190,47 +204,9 @@ impl Env {
         &self.ndk_home
     }
 
-    pub fn version(&self) -> Result<Version, VersionError> {
-        let path = self.ndk_home.join("source.properties");
-        let file = File::open(&path).map_err(|source| VersionError::OpenFailed {
-            path: path.clone(),
-            source,
-        })?;
-        let props = java_properties::read(file).map_err(|source| VersionError::ParseFailed {
-            path: path.clone(),
-            source,
-        })?;
-        let revision = props
-            .get("Pkg.Revision")
-            .ok_or_else(|| VersionError::VersionMissing { path: path.clone() })?;
-        // The possible revision formats can be found in the comments of
-        // `$NDK_HOME/build/cmake/android.toolchain.cmake` - only the last component
-        // can be non-numerical, which we're not using anyway. If that changes,
-        // then the aforementioned file contains a regex we can use.
-        let components = revision
-            .split('.')
-            .take(2)
-            .map(|component| {
-                component
-                    .parse::<u32>()
-                    .map_err(|source| VersionError::ComponentNotNumerical {
-                        path: path.clone(),
-                        component: component.to_owned(),
-                        source,
-                    })
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-        if components.len() == 2 {
-            Ok(Version {
-                major: components[0],
-                minor: components[1],
-            })
-        } else {
-            Err(VersionError::TooFewComponents {
-                path,
-                version: revision.to_owned(),
-            })
-        }
+    pub fn version(&self) -> Result<source_props::Revision, source_props::Error> {
+        SourceProps::from_path(self.ndk_home.join("source.properties"))
+            .map(|props| props.pkg.revision)
     }
 
     pub fn prebuilt_dir(&self) -> Result<PathBuf, MissingToolError> {

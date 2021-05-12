@@ -17,7 +17,7 @@ pub fn check(env: &Env) -> Result<Section, Unrecoverable> {
             })
             .with_item(match android_env.ndk.version() {
                 Ok(ndk_version) => Ok(format!(
-                    "NDK {} installed at {:?}",
+                    "NDK v{} installed at {:?}",
                     ndk_version,
                     util::contract_home(android_env.ndk.home())?,
                 )),
