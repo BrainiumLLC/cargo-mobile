@@ -1,25 +1,14 @@
-use super::{Item, Section};
+use super::Section;
 use crate::{
     doctor::Unrecoverable,
+    os,
     util::{self, cli::VERSION_SHORT},
 };
-use once_cell_regex::regex;
 
-#[cfg(target_os = "macos")]
-fn check_os() -> Item {
-    Item::from_result(
-        util::run_and_search(
-            &mut bossy::Command::impure_parse("system_profiler SPSoftwareDataType"),
-            regex!(r"macOS (?P<version>.*)"),
-            |_output, caps| caps.name("version").unwrap().as_str().to_owned(),
-        )
-        .map(|version| format!("macOS v{}", version)),
-    )
-}
-
-#[cfg(target_os = "linux")]
-fn check_os() -> Item {
-    todo!()
+fn check_os() -> Result<String, String> {
+    os::Info::check()
+        .map(|info| format!("{} v{}", info.name, info.version))
+        .map_err(|err| format!("Failed to get OS info: {}", err))
 }
 
 fn check_rust() -> Result<String, String> {
