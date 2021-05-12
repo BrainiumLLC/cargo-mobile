@@ -80,25 +80,24 @@ fn validate_xcode_plugin(xcode_version: (u32, u32), section: Section) -> Section
             Ok(status) => {
                 if status.supported {
                     Item::victory(format!(
-                        "`xcode-rust-plugin` supports Xcode UUID {:?}",
+                        "xcode-rust-plugin supports Xcode UUID {:?}",
                         status.uuid
                     ))
                 } else {
                     Item::warning(format!(
-                        "`xcode-rust-plugin` doesn't support Xcode UUID {:?}",
+                        "xcode-rust-plugin doesn't support Xcode UUID {:?}",
                         status.uuid
                     ))
                 }
             }
             Err(err) => Item::failure(format!(
-                "Failed to check `xcode-rust-plugin` UUID status: {}",
+                "Failed to check xcode-rust-plugin UUID status: {}",
                 err
             )),
         }),
-        Err(err) => section.with_failure(format!(
-            "Failed to get `xcode-rust-plugin` context: {}",
-            err
-        )),
+        Err(err) => {
+            section.with_failure(format!("Failed to get xcode-rust-plugin context: {}", err))
+        }
     }
 }
 
