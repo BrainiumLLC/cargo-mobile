@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use yes_or_no::yes_or_no;
 use structopt::clap::arg_enum;
+use yes_or_no::yes_or_no;
 
 yes_or_no!(NonInteractive);
 
