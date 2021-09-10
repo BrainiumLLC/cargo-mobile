@@ -4,18 +4,18 @@ plugins {
 }
 
 android {
-    compileSdkVersion(28)
+    compileSdkVersion(31)
     defaultConfig {
         applicationId = "{{reverse-domain app.domain}}.{{snake-case app.name}}"
         minSdkVersion({{android.min-sdk-version}})
-        targetSdkVersion(28)
+        targetSdkVersion(31)
         versionCode = 1
         versionName = "1.0"
     }
-    sourceSets {
+    sourceSets.getByName("main") {
         {{#if android.vulkan-validation}}// Vulkan validation layers
         val ndkHome = System.getenv("NDK_HOME")
-        getByName("main").jniLibs.srcDir("${ndkHome}/sources/third_party/vulkan/src/build-android/jniLibs"){{/if}}
+        jniLibs.srcDir("${ndkHome}/sources/third_party/vulkan/src/build-android/jniLibs"){{/if}}
     }
     buildTypes {
         getByName("debug") {
@@ -39,7 +39,7 @@ android {
         create("{{this.arch}}") {
             dimension = "abi"
             ndk {
-                setAbiFilters(listOf("{{this.abi}}"))
+                abiFilters += listOf("{{this.abi}}")
             }
         }{{/each}}
     }
