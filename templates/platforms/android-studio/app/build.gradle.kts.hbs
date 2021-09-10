@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    compileSdkVersion(31)
+    compileSdk = 31
     defaultConfig {
         applicationId = "{{reverse-domain app.domain}}.{{snake-case app.name}}"
-        minSdkVersion({{android.min-sdk-version}})
-        targetSdkVersion(31)
+        minSdk = {{android.min-sdk-version}}
+        targetSdk = 31
         versionCode = 1
         versionName = "1.0"
     }
@@ -22,10 +22,9 @@ android {
             isDebuggable = true
             isJniDebuggable = true
             isMinifyEnabled = false
-            isUseProguard = false
             packagingOptions {
                 {{~#each targets}}
-                doNotStrip("*/{{this.abi}}/*.so"){{/each}}
+                jniLibs.keepDebugSymbols.add("*/{{this.abi}}/*.so"){{/each}}
             }
         }
         getByName("release") {
@@ -33,7 +32,7 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
         }
     }
-    flavorDimensions("abi")
+    flavorDimensions.add("abi")
     productFlavors {
         {{~#each targets}}
         create("{{this.arch}}") {
