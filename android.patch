@@ -1,0 +1,21 @@
+diff --git a/templates/platforms/android-studio/app/build.gradle.kts.hbs b/templates/platforms/android-studio/app/build.gradle.kts.hbs
+index d4aa3e6..ecfb007 100644
+--- a/templates/platforms/android-studio/app/build.gradle.kts.hbs
++++ b/templates/platforms/android-studio/app/build.gradle.kts.hbs
+@@ -42,6 +42,8 @@ android {
+             }
+         }{{/each}}
+     }
++
++    assetPacks += mutableSetOf(":core_asset_pack")
+ }
+ 
+ rust {
+diff --git a/templates/platforms/android-studio/settings.gradle b/templates/platforms/android-studio/settings.gradle
+index e7b4def..96e1fda 100644
+--- a/templates/platforms/android-studio/settings.gradle
++++ b/templates/platforms/android-studio/settings.gradle
+@@ -1 +1,2 @@
+ include ':app'
++include ':core_asset_pack'
+\ No newline at end of file

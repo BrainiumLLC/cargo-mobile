@@ -43,6 +43,8 @@ android {
             }
         }{{/each}}
     }
+
+    assetPacks += mutableSetOf({{quote-and-join-colon-prefix asset-packs}})
 }
 
 rust {

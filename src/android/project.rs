@@ -79,6 +79,7 @@ pub fn gen(
                     .map(|target| target.arch)
                     .collect::<Vec<_>>(),
             );
+            map.insert("asset-packs", vec!["core_asset_pack"]);
         },
         filter.fun(),
     )
