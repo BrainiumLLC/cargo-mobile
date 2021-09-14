@@ -1,5 +1,5 @@
 use super::{
-    config::{Config, Metadata},
+    config::{AssetPackInfo, Config, Metadata},
     env::Env,
     ndk,
     target::Target,
@@ -73,7 +73,7 @@ pub fn gen(
     let dest = config.project_dir();
 
     let asset_packs = metadata.asset_packs().unwrap_or_default();
-
+    let asset_pack_names: Vec<&str> = asset_packs.iter().map(|p| p.name.as_str()).collect();
     bike.filter_and_process(
         src,
         &dest,
@@ -91,14 +91,14 @@ pub fn gen(
                     .map(|target| target.arch)
                     .collect::<Vec<_>>(),
             );
-            map.insert("asset-packs", &asset_packs);
+            map.insert("asset-packs", &asset_pack_names);
         },
         filter.fun(),
     )
     .map_err(Error::TemplateProcessingFailed)?;
 
     for asset_pack in asset_packs {
-        let pack_dir = dest.join(asset_pack);
+        let pack_dir = dest.join(&asset_pack.name);
         fs::create_dir_all(&pack_dir).map_err(|cause| Error::DirectoryCreationFailed {
             path: dest.clone(),
             cause,
@@ -128,7 +128,7 @@ pub fn gen(
     Ok(())
 }
 
-fn write_asset_pack_build_file(dest: &Path, pack_name: &str) {
+fn write_asset_pack_build_file(dest: &Path, pack_info: &AssetPackInfo) {
     fs::write(
         dest.join("build.gradle"),
         &format!(
@@ -137,10 +137,10 @@ fn write_asset_pack_build_file(dest: &Path, pack_name: &str) {
 assetPack {{
     packName = \"{}\"
     dynamicDelivery {{
-        deliveryType = \"install-time\"
+        deliveryType = \"{}\"
     }}
 }}",
-            pack_name
+            pack_info.name, pack_info.delivery_type
         ),
     )
     .expect("unable to write asset pack build.gradle file");
