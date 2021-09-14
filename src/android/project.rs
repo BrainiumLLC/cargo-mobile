@@ -9,7 +9,10 @@ use crate::{
         ln,
     },
 };
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 pub static TEMPLATE_PACK: &str = "android-studio";
 
@@ -62,6 +65,7 @@ pub fn gen(
         .map_err(Error::MissingPack)?
         .expect_local();
     let dest = config.project_dir();
+    let asset_packs = vec!["core_asset_pack"];
     bike.filter_and_process(
         src,
         &dest,
@@ -79,11 +83,20 @@ pub fn gen(
                     .map(|target| target.arch)
                     .collect::<Vec<_>>(),
             );
-            map.insert("asset-packs", vec!["core_asset_pack"]);
+            map.insert("asset-packs", &asset_packs);
         },
         filter.fun(),
     )
     .map_err(Error::TemplateProcessingFailed)?;
+
+    for asset_pack in asset_packs {
+        let pack_dir = dest.join(asset_pack);
+        fs::create_dir_all(&pack_dir).map_err(|cause| Error::DirectoryCreationFailed {
+            path: dest.clone(),
+            cause,
+        })?;
+        write_asset_pack_build_file(&pack_dir, asset_pack);
+    }
 
     let dest = dest.join("app/src/main/assets/");
     fs::create_dir_all(&dest).map_err(|cause| Error::DirectoryCreationFailed {
@@ -105,4 +118,22 @@ pub fn gen(
     }
 
     Ok(())
+}
+
+fn write_asset_pack_build_file(dest: &Path, pack_name: &str) {
+    fs::write(
+        dest.join("build.gradle"),
+        &format!(
+            "apply plugin: 'com.android.asset-pack'
+
+assetPack {{
+    packName = \"{}\"
+    dynamicDelivery {{
+        deliveryType = \"install-time\"
+    }}
+}}",
+            pack_name
+        ),
+    )
+    .expect("unable to write asset pack build.gradle file");
 }
