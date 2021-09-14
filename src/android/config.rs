@@ -17,11 +17,12 @@ const fn default_true() -> bool {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct Metadata {
     #[serde(default = "default_true")]
     supported: bool,
-    #[serde(default)]
     features: Option<Vec<String>>,
+    asset_packs: Option<Vec<String>>,
 }
 
 impl Default for Metadata {
@@ -29,6 +30,7 @@ impl Default for Metadata {
         Self {
             supported: true,
             features: None,
+            asset_packs: None,
         }
     }
 }
@@ -44,6 +46,10 @@ impl Metadata {
 
     pub fn features(&self) -> Option<&[String]> {
         self.features.as_deref()
+    }
+
+    pub fn asset_packs(&self) -> Option<&[String]> {
+        self.asset_packs.as_deref()
     }
 }
 

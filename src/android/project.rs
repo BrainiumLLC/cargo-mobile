@@ -1,4 +1,9 @@
-use super::{config::Config, env::Env, ndk, target::Target};
+use super::{
+    config::{Config, Metadata},
+    env::Env,
+    ndk,
+    target::Target,
+};
 use crate::{
     dot_cargo,
     target::TargetTrait as _,
@@ -53,6 +58,7 @@ impl Reportable for Error {
 
 pub fn gen(
     config: &Config,
+    metadata: &Metadata,
     env: &Env,
     bike: &bicycle::Bicycle,
     filter: &templating::Filter,
@@ -65,7 +71,9 @@ pub fn gen(
         .map_err(Error::MissingPack)?
         .expect_local();
     let dest = config.project_dir();
-    let asset_packs = vec!["core_asset_pack"];
+
+    let asset_packs = metadata.asset_packs().unwrap_or_default();
+
     bike.filter_and_process(
         src,
         &dest,
