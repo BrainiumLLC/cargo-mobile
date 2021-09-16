@@ -213,10 +213,13 @@ impl Exec for Input {
                 profile: cli::Profile { profile },
                 filter: cli::Filter { filter },
             } => with_config(non_interactive, wrapper, |config, _| {
+                let metadata =
+                    OmniMetadata::load(config.app().root_dir()).map_err(Error::MetadataFailed)?;
+                let build_app_bundle = metadata.android().asset_packs().is_some();
                 ensure_init(config)?;
                 device_prompt(&env)
                     .map_err(Error::DevicePromptFailed)?
-                    .run(config, &env, noise_level, profile, filter)
+                    .run(config, &env, noise_level, profile, filter, build_app_bundle)
                     .map_err(Error::RunFailed)
             }),
             Command::Stacktrace => with_config(non_interactive, wrapper, |config, _| {

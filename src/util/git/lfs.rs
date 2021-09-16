@@ -1,3 +1,4 @@
+use crate::util;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -14,6 +15,8 @@ pub enum Error {
     BrewFailed(#[from] crate::apple::deps::Error),
     #[error("Failed to run `git lfs install`: {0}")]
     InstallFailed(#[source] bossy::Error),
+    #[error("Failed to run `brew install git lfs install`: {0}")]
+    BrewInstallFailed(#[from] util::InstallError),
 }
 
 pub fn ensure_present() -> Result<(), Error> {
@@ -27,7 +30,7 @@ pub fn ensure_present() -> Result<(), Error> {
     {
         // This only installs if not already present, so there's no need for us
         // to check here.
-        if crate::apple::deps::install("git-lfs", Default::default()).map_err(Error::from)? {
+        if util::install("git-lfs", Default::default()).map_err(Error::from)? {
             println!("Running `git lfs install` for you...");
         }
     }
