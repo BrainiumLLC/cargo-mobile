@@ -248,7 +248,7 @@ impl<'a> Device<'a> {
     fn clean_apks(&self, config: &Config, profile: Profile) -> Result<(), ApksBuildError> {
         let flavor = self.target.arch;
         let apks_path = Self::apks_path(config, profile, flavor);
-        bossy::Command::impure_parse("rm")
+        bossy::Command::impure_parse("rm -f")
             .with_parsed_args(
                 apks_path
                     .to_str()
