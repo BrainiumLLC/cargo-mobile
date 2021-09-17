@@ -60,12 +60,14 @@ impl Reportable for AabBuildError {
 
 #[derive(Debug)]
 pub enum ApksBuildError {
+    CleanFailed(bossy::Error),
     BuildFromAabFailed(bossy::Error),
 }
 
 impl Reportable for ApksBuildError {
     fn report(&self) -> Report {
         match self {
+            Self::CleanFailed(err) => Report::error("Failed to clean old APKS", err),
             Self::BuildFromAabFailed(err) => Report::error("Failed to build APKS from AAB", err),
         }
     }
@@ -243,6 +245,20 @@ impl<'a> Device<'a> {
         Ok(())
     }
 
+    fn clean_apks(&self, config: &Config, profile: Profile) -> Result<(), ApksBuildError> {
+        let flavor = self.target.arch;
+        let apks_path = Self::apks_path(config, profile, flavor);
+        bossy::Command::impure_parse("rm")
+            .with_parsed_args(
+                apks_path
+                    .to_str()
+                    .unwrap_or_else(|| panic!("path {:?} contained invalid utf-8", apks_path)),
+            )
+            .run_and_wait()
+            .map_err(ApksBuildError::CleanFailed)?;
+        Ok(())
+    }
+
     fn build_aab(&self, config: &Config, env: &Env, profile: Profile) -> Result<(), AabBuildError> {
         use heck::CamelCase as _;
         let flavor = self.target.arch.to_camel_case();
@@ -260,8 +276,18 @@ impl<'a> Device<'a> {
         let aab_path = Self::aab_path(config, profile, flavor);
         bossy::Command::impure_parse("bundletool")
             .with_parsed_args("build-apks")
-            .with_parsed_args(format!("--bundle={}", aab_path.to_str().unwrap()))
-            .with_parsed_args(format!("--output={}", apks_path.to_str().unwrap()))
+            .with_parsed_args(format!(
+                "--bundle={}",
+                aab_path
+                    .to_str()
+                    .unwrap_or_else(|| panic!("path {:?} contained invalid utf-8", aab_path))
+            ))
+            .with_parsed_args(format!(
+                "--output={}",
+                apks_path
+                    .to_str()
+                    .unwrap_or_else(|| panic!("path {:?} contained invalid utf-8", apks_path))
+            ))
             .with_parsed_args("--connected-device")
             .run_and_wait()
             .map_err(ApksBuildError::BuildFromAabFailed)?;
@@ -277,7 +303,12 @@ impl<'a> Device<'a> {
         let apks_path = Self::apks_path(config, profile, flavor);
         bossy::Command::impure_parse("bundletool")
             .with_parsed_args("install-apks")
-            .with_parsed_args(format!("--apks={}", apks_path.to_str().unwrap()))
+            .with_parsed_args(format!(
+                "--apks={}",
+                apks_path
+                    .to_str()
+                    .unwrap_or_else(|| panic!("path {:?} contained invalid utf-8", apks_path))
+            ))
             .run_and_wait()
             .map_err(ApkInstallError::InstallFromAabFailed)?;
         Ok(())
@@ -301,6 +332,8 @@ impl<'a> Device<'a> {
     ) -> Result<(), RunError> {
         if build_app_bundle {
             install_bundletool()?;
+            self.clean_apks(config, profile)
+                .map_err(RunError::ApksFromAabBuildError)?;
             self.build_aab(config, env, profile)
                 .map_err(RunError::AabBuildError)?;
             self.build_apks_from_aab(config, profile)
