@@ -96,7 +96,9 @@ pub fn gen(
         filter.fun(),
     )
     .map_err(Error::TemplateProcessingFailed)?;
-
+    if !asset_packs.is_empty() {
+        log::warn!("if running from Android Studio, you must first set your deployment option to 'APK from app bundle'");
+    }
     for asset_pack in asset_packs {
         let pack_dir = dest.join(&asset_pack.name);
         fs::create_dir_all(&pack_dir).map_err(|cause| Error::DirectoryCreationFailed {
