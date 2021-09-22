@@ -23,8 +23,71 @@ fn gradlew(config: &Config, env: &Env) -> bossy::Command {
         .with_arg(config.project_dir())
 }
 
-fn install_bundletool() -> Result<(), RunError> {
-    util::install("bundletool", Default::default()).map_err(RunError::BundletoolInstallFailed)?;
+#[cfg(target_os = "linux")] // TODO: Swap
+struct BundletoolJarInfo {
+    version: &'static str,
+}
+
+#[cfg(target_os = "linux")] // TODO: Swap
+impl BundletoolJarInfo {
+    const fn new(version: &'static str) -> Self {
+        Self { version }
+    }
+    fn jar(&self) -> String {
+        format!("bundletool-all-{}.jar", self.version)
+    }
+    fn jar_path(&self) -> String {
+        format!("gen/android/{}", self.jar())
+    }
+    fn download_url(&self) -> String {
+        format!(
+            "https://github.com/google/bundletool/releases/download/{}/{}",
+            self.version,
+            self.jar()
+        )
+    }
+    fn run_command(&self) -> String {
+        format!("java -jar {}", self.jar_path())
+    }
+}
+
+#[cfg(target_os = "linux")] // TODO: Swap
+const BUNDLE_TOOL_JAR_INFO: BundletoolJarInfo = BundletoolJarInfo::new("1.8.0");
+
+#[cfg(target_os = "macos")] // TODO: Swap
+fn bundletool_command() -> String {
+    "bundletool".to_string()
+}
+
+#[cfg(target_os = "linux")] // TODO: Swap
+fn bundletool_command() -> String {
+    BUNDLE_TOOL_JAR_INFO.run_command()
+}
+
+#[cfg(target_os = "macos")] // TODO: Swap
+fn install_bundletool() -> Result<(), BundletoolInstallError> {
+    crate::apple::deps::install("bundletool", Default::default())
+        .map_err(BundletoolInstallError::MacOSInstallFailed)?;
+
+    Ok(())
+}
+
+#[cfg(target_os = "linux")] // TODO: Swap
+fn install_bundletool() -> Result<(), BundletoolInstallError> {
+    if !std::path::Path::new(&BUNDLE_TOOL_JAR_INFO.jar_path()).exists() {
+        let response = ureq::get(&BUNDLE_TOOL_JAR_INFO.download_url())
+            .call()
+            .map_err(BundletoolInstallError::DownloadFailed)?;
+        let mut out = std::fs::File::create(&BUNDLE_TOOL_JAR_INFO.jar())
+            .map_err(BundletoolInstallError::JarFileCreationFailed)?;
+        std::io::copy(&mut response.into_reader(), &mut out)
+            .map_err(BundletoolInstallError::CopyToFileFailed)?;
+        std::fs::rename(
+            &BUNDLE_TOOL_JAR_INFO.jar(),
+            &BUNDLE_TOOL_JAR_INFO.jar_path(),
+        )
+        .map_err(BundletoolInstallError::MoveFileFailed)?;
+    }
     Ok(())
 }
 
@@ -74,6 +137,31 @@ impl Reportable for ApksBuildError {
 }
 
 #[derive(Debug)]
+pub enum BundletoolInstallError {
+    MacOSInstallFailed(crate::apple::deps::Error),
+    DownloadFailed(ureq::Error),
+    JarFileCreationFailed(std::io::Error),
+    CopyToFileFailed(std::io::Error),
+    MoveFileFailed(std::io::Error),
+}
+
+impl Reportable for BundletoolInstallError {
+    fn report(&self) -> Report {
+        match self {
+            Self::MacOSInstallFailed(err) => Report::error("Failed to install `bundletool`", err),
+            Self::DownloadFailed(err) => Report::error("Failed to download `bundletool`", err),
+            Self::JarFileCreationFailed(err) => {
+                Report::error("Failed to create bundletool.jar", err)
+            }
+            Self::CopyToFileFailed(err) => {
+                Report::error("Failed to copy content into bundletool.jar", err)
+            }
+            Self::MoveFileFailed(err) => Report::error("Failed to move bundletool.jar", err),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum ApkInstallError {
     InstallFailed(bossy::Error),
     InstallFromAabFailed(bossy::Error),
@@ -95,7 +183,7 @@ pub enum RunError {
     StartFailed(bossy::Error),
     WakeScreenFailed(bossy::Error),
     LogcatFailed(bossy::Error),
-    BundletoolInstallFailed(util::InstallError),
+    BundletoolInstallFailed(BundletoolInstallError),
     AabBuildError(AabBuildError),
     ApksFromAabBuildError(ApksBuildError),
 }
@@ -108,9 +196,7 @@ impl Reportable for RunError {
             Self::StartFailed(err) => Report::error("Failed to start app on device", err),
             Self::WakeScreenFailed(err) => Report::error("Failed to wake device screen", err),
             Self::LogcatFailed(err) => Report::error("Failed to log output", err),
-            Self::BundletoolInstallFailed(err) => {
-                Report::error("Failed to install bundletool", err)
-            }
+            Self::BundletoolInstallFailed(err) => err.report(),
             Self::AabBuildError(err) => err.report(),
             Self::ApksFromAabBuildError(err) => err.report(),
         }
@@ -274,7 +360,7 @@ impl<'a> Device<'a> {
         let flavor = self.target.arch;
         let apks_path = Self::apks_path(config, profile, flavor);
         let aab_path = Self::aab_path(config, profile, flavor);
-        bossy::Command::impure_parse("bundletool")
+        bossy::Command::impure_parse(bundletool_command())
             .with_parsed_args("build-apks")
             .with_parsed_args(format!(
                 "--bundle={}",
@@ -301,7 +387,7 @@ impl<'a> Device<'a> {
     ) -> Result<(), ApkInstallError> {
         let flavor = self.target.arch;
         let apks_path = Self::apks_path(config, profile, flavor);
-        bossy::Command::impure_parse("bundletool")
+        bossy::Command::impure_parse(bundletool_command())
             .with_parsed_args("install-apks")
             .with_parsed_args(format!(
                 "--apks={}",
@@ -331,7 +417,7 @@ impl<'a> Device<'a> {
         build_app_bundle: bool,
     ) -> Result<(), RunError> {
         if build_app_bundle {
-            install_bundletool()?;
+            install_bundletool().map_err(RunError::BundletoolInstallFailed)?;
             self.clean_apks(config, profile)
                 .map_err(RunError::ApksFromAabBuildError)?;
             self.build_aab(config, env, profile)

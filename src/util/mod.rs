@@ -442,24 +442,3 @@ pub enum InstallError {
         source: bossy::Error,
     },
 }
-
-pub fn install(
-    package: &'static str,
-    reinstall_deps: opts::ReinstallDeps,
-) -> Result<bool, InstallError> {
-    let found = command_present(package)
-        .map_err(|source| InstallError::PresenceCheckFailed { package, source })?;
-    log::info!("package `{}` present: {}", package, found);
-    if !found || reinstall_deps.yes() {
-        println!("Installing `{}`...", package);
-        // reinstall works even if it's not installed yet, and will upgrade
-        // if it's already installed!
-        bossy::Command::impure_parse("brew reinstall")
-            .with_arg(package)
-            .run_and_wait()
-            .map_err(|source| InstallError::InstallFailed { package, source })?;
-        Ok(true)
-    } else {
-        Ok(false)
-    }
-}

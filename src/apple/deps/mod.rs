@@ -19,12 +19,38 @@ static PACKAGES: &[&str] = &["xcodegen", "ios-deploy"];
 pub enum Error {
     #[error(transparent)]
     OutdatedFailed(#[from] OutdatedError),
-    #[error(transparent)]
-    InstallError(#[from] util::InstallError),
+    #[error("Failed to check for presence of `{package}`: {source}")]
+    PresenceCheckFailed {
+        package: &'static str,
+        source: bossy::Error,
+    },
+    #[error("Failed to install `{package}`: {source}")]
+    InstallFailed {
+        package: &'static str,
+        source: bossy::Error,
+    },
     #[error("Failed to prompt to install updates: {0}")]
     PromptFailed(#[from] std::io::Error),
     #[error(transparent)]
     VersionLookupFailed(#[from] system_profile::Error),
+}
+
+pub fn install(package: &'static str, reinstall_deps: opts::ReinstallDeps) -> Result<bool, Error> {
+    let found = util::command_present(package)
+        .map_err(|source| Error::PresenceCheckFailed { package, source })?;
+    log::info!("package `{}` present: {}", package, found);
+    if !found || reinstall_deps.yes() {
+        println!("Installing `{}`...", package);
+        // reinstall works even if it's not installed yet, and will upgrade
+        // if it's already installed!
+        bossy::Command::impure_parse("brew reinstall")
+            .with_arg(package)
+            .run_and_wait()
+            .map_err(|source| Error::InstallFailed { package, source })?;
+        Ok(true)
+    } else {
+        Ok(false)
+    }
 }
 
 pub fn install_all(
@@ -34,7 +60,7 @@ pub fn install_all(
     reinstall_deps: opts::ReinstallDeps,
 ) -> Result<(), Error> {
     for package in PACKAGES {
-        util::install(package, reinstall_deps)?;
+        install(package, reinstall_deps)?;
     }
     let outdated = Outdated::load()?;
     outdated.print_notice();
@@ -52,7 +78,7 @@ pub fn install_all(
                 bossy::Command::impure_parse("brew upgrade")
                     .with_arg(package)
                     .run_and_wait()
-                    .map_err(|source| util::InstallError::InstallFailed { package, source })?;
+                    .map_err(|source| Error::InstallFailed { package, source })?;
             }
         }
     }

@@ -30,7 +30,7 @@ pub fn ensure_present() -> Result<(), Error> {
     {
         // This only installs if not already present, so there's no need for us
         // to check here.
-        if util::install("git-lfs", Default::default()).map_err(Error::from)? {
+        if crate::apple::deps::install("git-lfs", Default::default()).map_err(Error::from)? {
             println!("Running `git lfs install` for you...");
         }
     }
