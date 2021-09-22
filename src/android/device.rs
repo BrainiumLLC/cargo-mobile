@@ -23,12 +23,12 @@ fn gradlew(config: &Config, env: &Env) -> bossy::Command {
         .with_arg(config.project_dir())
 }
 
-#[cfg(target_os = "linux")] // TODO: Swap
+#[cfg(target_os = "linux")]
 struct BundletoolJarInfo {
     version: &'static str,
 }
 
-#[cfg(target_os = "linux")] // TODO: Swap
+#[cfg(target_os = "linux")]
 impl BundletoolJarInfo {
     const fn new(version: &'static str) -> Self {
         Self { version }
@@ -51,20 +51,20 @@ impl BundletoolJarInfo {
     }
 }
 
-#[cfg(target_os = "linux")] // TODO: Swap
+#[cfg(target_os = "linux")]
 const BUNDLE_TOOL_JAR_INFO: BundletoolJarInfo = BundletoolJarInfo::new("1.8.0");
 
-#[cfg(target_os = "macos")] // TODO: Swap
+#[cfg(target_os = "macos")]
 fn bundletool_command() -> String {
     "bundletool".to_string()
 }
 
-#[cfg(target_os = "linux")] // TODO: Swap
+#[cfg(target_os = "linux")]
 fn bundletool_command() -> String {
     BUNDLE_TOOL_JAR_INFO.run_command()
 }
 
-#[cfg(target_os = "macos")] // TODO: Swap
+#[cfg(target_os = "macos")]
 fn install_bundletool() -> Result<(), BundletoolInstallError> {
     crate::apple::deps::install("bundletool", Default::default())
         .map_err(BundletoolInstallError::MacOSInstallFailed)?;
@@ -72,7 +72,7 @@ fn install_bundletool() -> Result<(), BundletoolInstallError> {
     Ok(())
 }
 
-#[cfg(target_os = "linux")] // TODO: Swap
+#[cfg(target_os = "linux")]
 fn install_bundletool() -> Result<(), BundletoolInstallError> {
     if !std::path::Path::new(&BUNDLE_TOOL_JAR_INFO.jar_path()).exists() {
         let response = ureq::get(&BUNDLE_TOOL_JAR_INFO.download_url())
@@ -138,6 +138,7 @@ impl Reportable for ApksBuildError {
 
 #[derive(Debug)]
 pub enum BundletoolInstallError {
+    #[cfg(target_os = "macos")]
     MacOSInstallFailed(crate::apple::deps::Error),
     DownloadFailed(ureq::Error),
     JarFileCreationFailed(std::io::Error),
@@ -148,6 +149,7 @@ pub enum BundletoolInstallError {
 impl Reportable for BundletoolInstallError {
     fn report(&self) -> Report {
         match self {
+            #[cfg(target_os = "macos")]
             Self::MacOSInstallFailed(err) => Report::error("Failed to install `bundletool`", err),
             Self::DownloadFailed(err) => Report::error("Failed to download `bundletool`", err),
             Self::JarFileCreationFailed(err) => {
