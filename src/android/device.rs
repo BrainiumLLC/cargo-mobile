@@ -315,31 +315,48 @@ impl<'a> Device<'a> {
         }
     }
 
-    fn apk_path(config: &Config, profile: Profile, flavor: &str) -> std::path::PathBuf {
-        let build_ty = profile.as_str();
+    fn output_resource_path(
+        output_dir: &str,
+        file_extension: &str,
+        config: &Config,
+        profile: Profile,
+        flavor: &str,
+    ) -> std::path::PathBuf {
         let suffix = Self::suffix(profile);
         config.project_dir().join(format!(
-            "app/build/outputs/apk/{}/{}/app-{}-{}.apk",
-            flavor, build_ty, flavor, suffix,
+            "app/build/outputs/{}/app-{}-{}.{}",
+            output_dir, flavor, suffix, file_extension
         ))
+    }
+
+    fn apk_path(config: &Config, profile: Profile, flavor: &str) -> std::path::PathBuf {
+        Self::output_resource_path(
+            &format!("apk/{}/{}", flavor, profile.as_str()),
+            "apk",
+            config,
+            profile,
+            flavor,
+        )
     }
 
     fn apks_path(config: &Config, profile: Profile, flavor: &str) -> std::path::PathBuf {
-        let build_ty = profile.as_str();
-        let suffix = Self::suffix(profile);
-        config.project_dir().join(format!(
-            "app/build/outputs/apk/{}/{}/app-{}-{}.apks",
-            flavor, build_ty, flavor, suffix,
-        ))
+        Self::output_resource_path(
+            &format!("apk/{}/{}", flavor, profile.as_str()),
+            "apks",
+            config,
+            profile,
+            flavor,
+        )
     }
 
     fn aab_path(config: &Config, profile: Profile, flavor: &str) -> std::path::PathBuf {
-        let build_ty = profile.as_str();
-        let suffix = Self::suffix(profile);
-        config.project_dir().join(format!(
-            "app/build/outputs/bundle/{}{}/app-{}-{}.aab",
-            flavor, build_ty, flavor, suffix
-        ))
+        Self::output_resource_path(
+            &format!("bundle/{}{}", flavor, profile.as_str()),
+            "aab",
+            config,
+            profile,
+            flavor,
+        )
     }
 
     fn build_apk(
