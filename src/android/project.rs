@@ -73,7 +73,6 @@ pub fn gen(
     let dest = config.project_dir();
 
     let asset_packs = metadata.asset_packs().unwrap_or_default();
-    let asset_pack_names: Vec<&str> = asset_packs.iter().map(|p| p.name.as_str()).collect();
     bike.filter_and_process(
         src,
         &dest,
@@ -91,13 +90,22 @@ pub fn gen(
                     .map(|target| target.arch)
                     .collect::<Vec<_>>(),
             );
-            map.insert("asset-packs", &asset_pack_names);
+            map.insert(
+                "asset-packs",
+                asset_packs
+                    .iter()
+                    .map(|p| p.name.as_str())
+                    .collect::<Vec<_>>(),
+            );
         },
         filter.fun(),
     )
     .map_err(Error::TemplateProcessingFailed)?;
     if !asset_packs.is_empty() {
-        log::warn!("if running from Android Studio, you must first set your deployment option to 'APK from app bundle'");
+        Report::action_request(
+            "When running from Android Studio, you must first set your deployment option to 'APK from app bundle'.", 
+            "Android Studio will not be able to find your asset pack assets otherwise. The option can be found under 'Run > Edit Configurations > Deploy'."
+        );
     }
     for asset_pack in asset_packs {
         let pack_dir = dest.join(&asset_pack.name);

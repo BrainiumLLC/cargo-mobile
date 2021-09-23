@@ -15,8 +15,6 @@ pub enum Error {
     BrewFailed(#[from] crate::apple::deps::Error),
     #[error("Failed to run `git lfs install`: {0}")]
     InstallFailed(#[source] bossy::Error),
-    #[error("Failed to run `brew install git lfs install`: {0}")]
-    BrewInstallFailed(#[from] util::InstallError),
 }
 
 pub fn ensure_present() -> Result<(), Error> {

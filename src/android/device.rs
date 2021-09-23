@@ -23,72 +23,101 @@ fn gradlew(config: &Config, env: &Env) -> bossy::Command {
         .with_arg(config.project_dir())
 }
 
-#[cfg(target_os = "linux")]
-struct BundletoolJarInfo {
-    version: &'static str,
+#[cfg(not(target_os = "macos"))]
+mod BundleToolJar {
+    use std::path::PathBuf;
+
+    use crate::android::device::{Config, Invalidutf8Error};
+
+    pub struct BundletoolJarInfo {
+        version: &'static str,
+    }
+
+    impl BundletoolJarInfo {
+        const fn new(version: &'static str) -> Self {
+            Self { version }
+        }
+
+        fn jar(&self) -> String {
+            format!("bundletool-all-{}.jar", self.version)
+        }
+
+        pub fn jar_path(&self, config: &Config) -> PathBuf {
+            config.project_dir().join(self.jar())
+        }
+
+        pub fn download_url(&self) -> String {
+            format!(
+                "https://github.com/google/bundletool/releases/download/{}/{}",
+                self.version,
+                self.jar()
+            )
+        }
+
+        pub fn run_command(&self, config: &Config) -> Result<String, Invalidutf8Error> {
+            let jar_path = self.jar_path(config);
+
+            Ok(format!(
+                "java -jar {}",
+                jar_path
+                    .to_str()
+                    .ok_or_else(|| Invalidutf8Error(jar_path.clone()))?
+            ))
+        }
+    }
+
+    pub const BUNDLE_TOOL_JAR_INFO: BundletoolJarInfo = BundletoolJarInfo::new("1.8.0");
 }
 
-#[cfg(target_os = "linux")]
-impl BundletoolJarInfo {
-    const fn new(version: &'static str) -> Self {
-        Self { version }
+fn bundletool_command_string(config: &Config) -> Result<String, Invalidutf8Error> {
+    #[cfg(not(target_os = "macos"))]
+    {
+        BundleToolJar::BUNDLE_TOOL_JAR_INFO.run_command(config)
     }
-    fn jar(&self) -> String {
-        format!("bundletool-all-{}.jar", self.version)
-    }
-    fn jar_path(&self) -> String {
-        format!("gen/android/{}", self.jar())
-    }
-    fn download_url(&self) -> String {
-        format!(
-            "https://github.com/google/bundletool/releases/download/{}/{}",
-            self.version,
-            self.jar()
-        )
-    }
-    fn run_command(&self) -> String {
-        format!("java -jar {}", self.jar_path())
+    #[cfg(target_os = "macos")]
+    {
+        Ok("bundletool".to_string())
     }
 }
 
-#[cfg(target_os = "linux")]
-const BUNDLE_TOOL_JAR_INFO: BundletoolJarInfo = BundletoolJarInfo::new("1.8.0");
-
-#[cfg(target_os = "macos")]
-fn bundletool_command() -> String {
-    "bundletool".to_string()
-}
-
-#[cfg(target_os = "linux")]
-fn bundletool_command() -> String {
-    BUNDLE_TOOL_JAR_INFO.run_command()
-}
-
-#[cfg(target_os = "macos")]
-fn install_bundletool() -> Result<(), BundletoolInstallError> {
-    crate::apple::deps::install("bundletool", Default::default())
-        .map_err(BundletoolInstallError::MacOSInstallFailed)?;
-
-    Ok(())
-}
-
-#[cfg(target_os = "linux")]
-fn install_bundletool() -> Result<(), BundletoolInstallError> {
-    if !std::path::Path::new(&BUNDLE_TOOL_JAR_INFO.jar_path()).exists() {
-        let response = ureq::get(&BUNDLE_TOOL_JAR_INFO.download_url())
-            .call()
-            .map_err(BundletoolInstallError::DownloadFailed)?;
-        let mut out = std::fs::File::create(&BUNDLE_TOOL_JAR_INFO.jar())
-            .map_err(BundletoolInstallError::JarFileCreationFailed)?;
-        std::io::copy(&mut response.into_reader(), &mut out)
-            .map_err(BundletoolInstallError::CopyToFileFailed)?;
-        std::fs::rename(
-            &BUNDLE_TOOL_JAR_INFO.jar(),
-            &BUNDLE_TOOL_JAR_INFO.jar_path(),
-        )
-        .map_err(BundletoolInstallError::MoveFileFailed)?;
+fn install_bundletool(config: &Config) -> Result<(), BundletoolInstallError> {
+    #[cfg(not(target_os = "macos"))]
+    {
+        if !std::path::Path::new(&BundleToolJar::BUNDLE_TOOL_JAR_INFO.jar_path(config)).exists() {
+            let jar_path = BundleToolJar::BUNDLE_TOOL_JAR_INFO.jar_path(config);
+            let response = ureq::get(&BundleToolJar::BUNDLE_TOOL_JAR_INFO.download_url())
+                .call()
+                .map_err(BundletoolInstallError::DownloadFailed)?;
+            let mut out = std::fs::File::create(&jar_path).map_err(|err| {
+                BundletoolInstallError::JarFileCreationFailed {
+                    path: jar_path.clone(),
+                    cause: err,
+                }
+            })?;
+            std::io::copy(&mut response.into_reader(), &mut out).map_err(|err| {
+                BundletoolInstallError::CopyToFileFailed {
+                    path: jar_path,
+                    cause: err,
+                }
+            })?;
+        }
+        Ok(())
     }
-    Ok(())
+    #[cfg(target_os = "macos")]
+    {
+        crate::apple::deps::install("bundletool", Default::default())
+            .map_err(BundletoolInstallError)?;
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct Invalidutf8Error(std::path::PathBuf);
+
+impl Reportable for Invalidutf8Error {
+    fn report(&self) -> Report {
+        Report::error("Path contained invaluid utf-8", format!("{:#?}", self.0))
+    }
 }
 
 #[derive(Debug)]
@@ -125,6 +154,7 @@ impl Reportable for AabBuildError {
 pub enum ApksBuildError {
     CleanFailed(bossy::Error),
     BuildFromAabFailed(bossy::Error),
+    Invalidutf8InPath(Invalidutf8Error),
 }
 
 impl Reportable for ApksBuildError {
@@ -132,33 +162,49 @@ impl Reportable for ApksBuildError {
         match self {
             Self::CleanFailed(err) => Report::error("Failed to clean old APKS", err),
             Self::BuildFromAabFailed(err) => Report::error("Failed to build APKS from AAB", err),
+            Self::Invalidutf8InPath(err) => err.report(),
         }
     }
 }
 
+#[cfg(target_os = "macos")]
 #[derive(Debug)]
-pub enum BundletoolInstallError {
-    #[cfg(target_os = "macos")]
-    MacOSInstallFailed(crate::apple::deps::Error),
-    DownloadFailed(ureq::Error),
-    JarFileCreationFailed(std::io::Error),
-    CopyToFileFailed(std::io::Error),
-    MoveFileFailed(std::io::Error),
+pub struct BundletoolInstallError(crate::apple::deps::Error);
+
+#[cfg(target_os = "macos")]
+impl Reportable for BundletoolInstallError {
+    fn report(&self) -> Report {
+        Report::error("Failed to install `bundletool`", &self.0)
+    }
 }
 
+#[cfg(not(target_os = "macos"))]
+#[derive(Debug)]
+pub enum BundletoolInstallError {
+    DownloadFailed(ureq::Error),
+    JarFileCreationFailed {
+        path: std::path::PathBuf,
+        cause: std::io::Error,
+    },
+    CopyToFileFailed {
+        path: std::path::PathBuf,
+        cause: std::io::Error,
+    },
+}
+
+#[cfg(not(target_os = "macos"))]
 impl Reportable for BundletoolInstallError {
     fn report(&self) -> Report {
         match self {
-            #[cfg(target_os = "macos")]
-            Self::MacOSInstallFailed(err) => Report::error("Failed to install `bundletool`", err),
             Self::DownloadFailed(err) => Report::error("Failed to download `bundletool`", err),
-            Self::JarFileCreationFailed(err) => {
-                Report::error("Failed to create bundletool.jar", err)
-            }
-            Self::CopyToFileFailed(err) => {
-                Report::error("Failed to copy content into bundletool.jar", err)
-            }
-            Self::MoveFileFailed(err) => Report::error("Failed to move bundletool.jar", err),
+            Self::JarFileCreationFailed { path, cause } => Report::error(
+                format!("Failed to create bundletool.jar at {:?}", path),
+                cause,
+            ),
+            Self::CopyToFileFailed { path, cause } => Report::error(
+                format!("Failed to copy content into bundletool.jar at {:?}", path),
+                cause,
+            ),
         }
     }
 }
@@ -167,6 +213,7 @@ impl Reportable for BundletoolInstallError {
 pub enum ApkInstallError {
     InstallFailed(bossy::Error),
     InstallFromAabFailed(bossy::Error),
+    Invalidutf8InPath(Invalidutf8Error),
 }
 
 impl Reportable for ApkInstallError {
@@ -174,6 +221,7 @@ impl Reportable for ApkInstallError {
         match self {
             Self::InstallFailed(err) => Report::error("Failed to install APK", err),
             Self::InstallFromAabFailed(err) => Report::error("Failed to install APK from AAB", err),
+            Self::Invalidutf8InPath(err) => err.report(),
         }
     }
 }
@@ -337,10 +385,11 @@ impl<'a> Device<'a> {
         let flavor = self.target.arch;
         let apks_path = Self::apks_path(config, profile, flavor);
         bossy::Command::impure_parse("rm -f")
-            .with_parsed_args(
+            .with_arg(
                 apks_path
                     .to_str()
-                    .unwrap_or_else(|| panic!("path {:?} contained invalid utf-8", apks_path)),
+                    .ok_or_else(|| Invalidutf8Error(apks_path.clone()))
+                    .map_err(ApksBuildError::Invalidutf8InPath)?,
             )
             .run_and_wait()
             .map_err(ApksBuildError::CleanFailed)?;
@@ -362,23 +411,27 @@ impl<'a> Device<'a> {
         let flavor = self.target.arch;
         let apks_path = Self::apks_path(config, profile, flavor);
         let aab_path = Self::aab_path(config, profile, flavor);
-        bossy::Command::impure_parse(bundletool_command())
-            .with_parsed_args("build-apks")
-            .with_parsed_args(format!(
-                "--bundle={}",
-                aab_path
-                    .to_str()
-                    .unwrap_or_else(|| panic!("path {:?} contained invalid utf-8", aab_path))
-            ))
-            .with_parsed_args(format!(
-                "--output={}",
-                apks_path
-                    .to_str()
-                    .unwrap_or_else(|| panic!("path {:?} contained invalid utf-8", apks_path))
-            ))
-            .with_parsed_args("--connected-device")
-            .run_and_wait()
-            .map_err(ApksBuildError::BuildFromAabFailed)?;
+        bossy::Command::impure_parse(
+            bundletool_command_string(config).map_err(ApksBuildError::Invalidutf8InPath)?,
+        )
+        .with_arg("build-apks")
+        .with_arg(format!(
+            "--bundle={}",
+            aab_path
+                .to_str()
+                .ok_or_else(|| Invalidutf8Error(aab_path.clone()))
+                .map_err(ApksBuildError::Invalidutf8InPath)?
+        ))
+        .with_arg(&format!(
+            "--output={}",
+            apks_path
+                .to_str()
+                .ok_or_else(|| Invalidutf8Error(apks_path.clone()))
+                .map_err(ApksBuildError::Invalidutf8InPath)?
+        ))
+        .with_arg("--connected-device")
+        .run_and_wait()
+        .map_err(ApksBuildError::BuildFromAabFailed)?;
         Ok(())
     }
 
@@ -389,16 +442,19 @@ impl<'a> Device<'a> {
     ) -> Result<(), ApkInstallError> {
         let flavor = self.target.arch;
         let apks_path = Self::apks_path(config, profile, flavor);
-        bossy::Command::impure_parse(bundletool_command())
-            .with_parsed_args("install-apks")
-            .with_parsed_args(format!(
-                "--apks={}",
-                apks_path
-                    .to_str()
-                    .unwrap_or_else(|| panic!("path {:?} contained invalid utf-8", apks_path))
-            ))
-            .run_and_wait()
-            .map_err(ApkInstallError::InstallFromAabFailed)?;
+        bossy::Command::impure_parse(
+            bundletool_command_string(config).map_err(ApkInstallError::Invalidutf8InPath)?,
+        )
+        .with_arg("install-apks")
+        .with_arg(format!(
+            "--apks={}",
+            apks_path
+                .to_str()
+                .ok_or_else(|| Invalidutf8Error(apks_path.clone()))
+                .map_err(ApkInstallError::Invalidutf8InPath)?,
+        ))
+        .run_and_wait()
+        .map_err(ApkInstallError::InstallFromAabFailed)?;
         Ok(())
     }
 
@@ -419,7 +475,7 @@ impl<'a> Device<'a> {
         build_app_bundle: bool,
     ) -> Result<(), RunError> {
         if build_app_bundle {
-            install_bundletool().map_err(RunError::BundletoolInstallFailed)?;
+            install_bundletool(config).map_err(RunError::BundletoolInstallFailed)?;
             self.clean_apks(config, profile)
                 .map_err(RunError::ApksFromAabBuildError)?;
             self.build_aab(config, env, profile)

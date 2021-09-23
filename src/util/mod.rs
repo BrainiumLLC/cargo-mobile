@@ -8,10 +8,7 @@ pub mod prompt;
 pub use self::{cargo::*, git::*, path::*};
 
 use self::cli::{Report, Reportable};
-use crate::{
-    opts,
-    os::{self, command_path},
-};
+use crate::os::{self, command_path};
 use once_cell_regex::{exports::regex::Captures, exports::regex::Regex, regex};
 use std::{
     fmt::{self, Debug, Display},
@@ -427,18 +424,4 @@ pub fn unwrap_either<T>(result: Result<T, T>) -> T {
     match result {
         Ok(t) | Err(t) => t,
     }
-}
-
-#[derive(Debug, Error)]
-pub enum InstallError {
-    #[error("Failed to check for presence of `{package}`: {source}")]
-    PresenceCheckFailed {
-        package: &'static str,
-        source: bossy::Error,
-    },
-    #[error("Failed to install `{package}`: {source}")]
-    InstallFailed {
-        package: &'static str,
-        source: bossy::Error,
-    },
 }
