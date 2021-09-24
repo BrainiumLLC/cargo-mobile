@@ -15,7 +15,10 @@ use crate::{
         cli::{Report, Reportable},
     },
 };
-use std::{fmt::{self, Display}, path::{PathBuf, Path}};
+use std::{
+    fmt::{self, Display},
+    path::{Path, PathBuf},
+};
 
 fn gradlew(config: &Config, env: &Env) -> bossy::Command {
     let gradlew_path = config.project_dir().join("gradlew");
