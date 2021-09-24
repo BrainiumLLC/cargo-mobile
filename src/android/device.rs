@@ -101,14 +101,13 @@ fn install_bundletool(config: &Config) -> Result<(), BundletoolInstallError> {
                 }
             })?;
         }
-        Ok(())
-    }
+    };
     #[cfg(target_os = "macos")]
     {
         crate::apple::deps::install("bundletool", Default::default())
             .map_err(BundletoolInstallError)?;
-        Ok(())
-    }
+    };
+    Ok(())
 }
 
 #[derive(Debug)]
