@@ -10,7 +10,7 @@ use crate::{
     templating::{self, Pack},
     util::{
         self,
-        cli::{Report, Reportable},
+        cli::{Report, Reportable, TextWrapper},
         ln,
     },
 };
@@ -61,6 +61,7 @@ pub fn gen(
     metadata: &Metadata,
     env: &Env,
     bike: &bicycle::Bicycle,
+    wrapper: &TextWrapper,
     filter: &templating::Filter,
     dot_cargo: &mut dot_cargo::DotCargo,
 ) -> Result<(), Error> {
@@ -103,9 +104,9 @@ pub fn gen(
     .map_err(Error::TemplateProcessingFailed)?;
     if !asset_packs.is_empty() {
         Report::action_request(
-            "When running from Android Studio, you must first set your deployment option to 'APK from app bundle'.", 
-            "Android Studio will not be able to find your asset pack assets otherwise. The option can be found under 'Run > Edit Configurations > Deploy'."
-        );
+            "When running from Android Studio, you must first set your deployment option to \"APK from app bundle\".", 
+            "Android Studio will not be able to find your asset packs otherwise. The option can be found under \"Run > Edit Configurations > Deploy\"."
+        ).print(wrapper);
     }
     for asset_pack in asset_packs {
         let pack_dir = dest.join(&asset_pack.name);

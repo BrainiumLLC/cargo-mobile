@@ -188,6 +188,7 @@ pub fn exec(
                 metadata.android(),
                 &env,
                 &bike,
+                wrapper,
                 &filter,
                 &mut dot_cargo,
             )
