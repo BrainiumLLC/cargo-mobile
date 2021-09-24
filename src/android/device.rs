@@ -5,6 +5,8 @@ use super::{
     jnilibs::{self, JniLibs},
     target::{BuildError, Target},
 };
+#[cfg(not(target_os = "macos"))]
+use crate::android::bundletool;
 use crate::{
     env::ExplicitEnv as _,
     opts::{FilterLevel, NoiseLevel, Profile},
@@ -13,7 +15,7 @@ use crate::{
         cli::{Report, Reportable},
     },
 };
-use std::fmt::{self, Display};
+use std::{fmt::{self, Display}, path::{PathBuf, Path}};
 
 fn gradlew(config: &Config, env: &Env) -> bossy::Command {
     let gradlew_path = config.project_dir().join("gradlew");
@@ -23,100 +25,45 @@ fn gradlew(config: &Config, env: &Env) -> bossy::Command {
         .with_arg(config.project_dir())
 }
 
-#[cfg(not(target_os = "macos"))]
-mod BundleToolJar {
-    use std::path::PathBuf;
-
-    use crate::android::device::{Config, Invalidutf8Error};
-
-    pub struct BundletoolJarInfo {
-        version: &'static str,
-    }
-
-    impl BundletoolJarInfo {
-        const fn new(version: &'static str) -> Self {
-            Self { version }
-        }
-
-        fn jar(&self) -> String {
-            format!("bundletool-all-{}.jar", self.version)
-        }
-
-        pub fn jar_path(&self, config: &Config) -> PathBuf {
-            config.project_dir().join(self.jar())
-        }
-
-        pub fn download_url(&self) -> String {
-            format!(
-                "https://github.com/google/bundletool/releases/download/{}/{}",
-                self.version,
-                self.jar()
-            )
-        }
-
-        pub fn run_command(&self, config: &Config) -> Result<String, Invalidutf8Error> {
-            let jar_path = self.jar_path(config);
-
-            Ok(format!(
-                "java -jar {}",
-                jar_path
-                    .to_str()
-                    .ok_or_else(|| Invalidutf8Error(jar_path.clone()))?
-            ))
-        }
-    }
-
-    pub const BUNDLE_TOOL_JAR_INFO: BundletoolJarInfo = BundletoolJarInfo::new("1.8.0");
-}
-
-fn bundletool_command_string(config: &Config) -> Result<String, Invalidutf8Error> {
+fn bundletool_command(config: &Config) -> bossy::Command {
     #[cfg(not(target_os = "macos"))]
     {
-        BundleToolJar::BUNDLE_TOOL_JAR_INFO.run_command(config)
+        bundletool::BUNDLE_TOOL_JAR_INFO.run_command(config)
     }
     #[cfg(target_os = "macos")]
     {
-        Ok("bundletool".to_string())
+        bossy::Command::impure("bundletool")
     }
 }
 
 fn install_bundletool(config: &Config) -> Result<(), BundletoolInstallError> {
     #[cfg(not(target_os = "macos"))]
     {
-        if !std::path::Path::new(&BundleToolJar::BUNDLE_TOOL_JAR_INFO.jar_path(config)).exists() {
-            let jar_path = BundleToolJar::BUNDLE_TOOL_JAR_INFO.jar_path(config);
-            let response = ureq::get(&BundleToolJar::BUNDLE_TOOL_JAR_INFO.download_url())
+        if !Path::new(&bundletool::BUNDLE_TOOL_JAR_INFO.jar_path(config)).exists() {
+            let jar_path = bundletool::BUNDLE_TOOL_JAR_INFO.jar_path(config);
+            let response = ureq::get(&bundletool::BUNDLE_TOOL_JAR_INFO.download_url())
                 .call()
                 .map_err(BundletoolInstallError::DownloadFailed)?;
-            let mut out = std::fs::File::create(&jar_path).map_err(|err| {
+            let mut out = std::fs::File::create(&jar_path).map_err(|cause| {
                 BundletoolInstallError::JarFileCreationFailed {
                     path: jar_path.clone(),
-                    cause: err,
+                    cause,
                 }
             })?;
-            std::io::copy(&mut response.into_reader(), &mut out).map_err(|err| {
+            std::io::copy(&mut response.into_reader(), &mut out).map_err(|cause| {
                 BundletoolInstallError::CopyToFileFailed {
                     path: jar_path,
-                    cause: err,
+                    cause,
                 }
             })?;
         }
-    };
+    }
     #[cfg(target_os = "macos")]
     {
         crate::apple::deps::install("bundletool", Default::default())
             .map_err(BundletoolInstallError)?;
-    };
-    Ok(())
-}
-
-#[derive(Debug)]
-pub struct Invalidutf8Error(std::path::PathBuf);
-
-impl Reportable for Invalidutf8Error {
-    fn report(&self) -> Report {
-        Report::error("Path contained invaluid utf-8", format!("{:#?}", self.0))
     }
+    Ok(())
 }
 
 #[derive(Debug)]
@@ -151,9 +98,10 @@ impl Reportable for AabBuildError {
 
 #[derive(Debug)]
 pub enum ApksBuildError {
-    CleanFailed(bossy::Error),
+    CleanFailed(std::io::Error),
     BuildFromAabFailed(bossy::Error),
-    Invalidutf8InPath(Invalidutf8Error),
+    InvalidUtf8InAabPath(PathBuf),
+    InvalidUtf8InApksPath(PathBuf),
 }
 
 impl Reportable for ApksBuildError {
@@ -161,7 +109,14 @@ impl Reportable for ApksBuildError {
         match self {
             Self::CleanFailed(err) => Report::error("Failed to clean old APKS", err),
             Self::BuildFromAabFailed(err) => Report::error("Failed to build APKS from AAB", err),
-            Self::Invalidutf8InPath(err) => err.report(),
+            Self::InvalidUtf8InApksPath(path) => Report::error(
+                "apks path {:?} contained invalid utf-8",
+                format!("{:?}", path),
+            ),
+            Self::InvalidUtf8InAabPath(path) => Report::error(
+                "aab path {:?} contained invalid utf-8",
+                format!("{:?}", path),
+            ),
         }
     }
 }
@@ -182,11 +137,11 @@ impl Reportable for BundletoolInstallError {
 pub enum BundletoolInstallError {
     DownloadFailed(ureq::Error),
     JarFileCreationFailed {
-        path: std::path::PathBuf,
+        path: PathBuf,
         cause: std::io::Error,
     },
     CopyToFileFailed {
-        path: std::path::PathBuf,
+        path: PathBuf,
         cause: std::io::Error,
     },
 }
@@ -212,7 +167,7 @@ impl Reportable for BundletoolInstallError {
 pub enum ApkInstallError {
     InstallFailed(bossy::Error),
     InstallFromAabFailed(bossy::Error),
-    Invalidutf8InPath(Invalidutf8Error),
+    InvalidUtf8InApksPath(PathBuf),
 }
 
 impl Reportable for ApkInstallError {
@@ -220,7 +175,10 @@ impl Reportable for ApkInstallError {
         match self {
             Self::InstallFailed(err) => Report::error("Failed to install APK", err),
             Self::InstallFromAabFailed(err) => Report::error("Failed to install APK from AAB", err),
-            Self::Invalidutf8InPath(err) => err.report(),
+            Self::InvalidUtf8InApksPath(path) => Report::error(
+                "apks path {:?} contained invalid utf-8",
+                format!("{:?}", path),
+            ),
         }
     }
 }
@@ -233,7 +191,7 @@ pub enum RunError {
     WakeScreenFailed(bossy::Error),
     LogcatFailed(bossy::Error),
     BundletoolInstallFailed(BundletoolInstallError),
-    AabBuildError(AabBuildError),
+    AabBuildFailed(AabBuildError),
     ApksFromAabBuildError(ApksBuildError),
 }
 
@@ -246,7 +204,7 @@ impl Reportable for RunError {
             Self::WakeScreenFailed(err) => Report::error("Failed to wake device screen", err),
             Self::LogcatFailed(err) => Report::error("Failed to log output", err),
             Self::BundletoolInstallFailed(err) => err.report(),
-            Self::AabBuildError(err) => err.report(),
+            Self::AabBuildFailed(err) => err.report(),
             Self::ApksFromAabBuildError(err) => err.report(),
         }
     }
@@ -320,7 +278,7 @@ impl<'a> Device<'a> {
         config: &Config,
         profile: Profile,
         flavor: &str,
-    ) -> std::path::PathBuf {
+    ) -> PathBuf {
         let suffix = Self::suffix(profile);
         config.project_dir().join(format!(
             "app/build/outputs/{}/app-{}-{}.{}",
@@ -328,7 +286,7 @@ impl<'a> Device<'a> {
         ))
     }
 
-    fn apk_path(config: &Config, profile: Profile, flavor: &str) -> std::path::PathBuf {
+    fn apk_path(config: &Config, profile: Profile, flavor: &str) -> PathBuf {
         Self::output_resource_path(
             &format!("apk/{}/{}", flavor, profile.as_str()),
             "apk",
@@ -338,7 +296,7 @@ impl<'a> Device<'a> {
         )
     }
 
-    fn apks_path(config: &Config, profile: Profile, flavor: &str) -> std::path::PathBuf {
+    fn apks_path(config: &Config, profile: Profile, flavor: &str) -> PathBuf {
         Self::output_resource_path(
             &format!("apk/{}/{}", flavor, profile.as_str()),
             "apks",
@@ -348,7 +306,7 @@ impl<'a> Device<'a> {
         )
     }
 
-    fn aab_path(config: &Config, profile: Profile, flavor: &str) -> std::path::PathBuf {
+    fn aab_path(config: &Config, profile: Profile, flavor: &str) -> PathBuf {
         Self::output_resource_path(
             &format!("bundle/{}{}", flavor, profile.as_str()),
             "aab",
@@ -400,15 +358,9 @@ impl<'a> Device<'a> {
     fn clean_apks(&self, config: &Config, profile: Profile) -> Result<(), ApksBuildError> {
         let flavor = self.target.arch;
         let apks_path = Self::apks_path(config, profile, flavor);
-        bossy::Command::impure_parse("rm -f")
-            .with_arg(
-                apks_path
-                    .to_str()
-                    .ok_or_else(|| Invalidutf8Error(apks_path.clone()))
-                    .map_err(ApksBuildError::Invalidutf8InPath)?,
-            )
-            .run_and_wait()
-            .map_err(ApksBuildError::CleanFailed)?;
+        if Path::new(&apks_path).exists() {
+            std::fs::remove_file(&apks_path).map_err(ApksBuildError::CleanFailed)?;
+        }
         Ok(())
     }
 
@@ -427,27 +379,23 @@ impl<'a> Device<'a> {
         let flavor = self.target.arch;
         let apks_path = Self::apks_path(config, profile, flavor);
         let aab_path = Self::aab_path(config, profile, flavor);
-        bossy::Command::impure_parse(
-            bundletool_command_string(config).map_err(ApksBuildError::Invalidutf8InPath)?,
-        )
-        .with_arg("build-apks")
-        .with_arg(format!(
-            "--bundle={}",
-            aab_path
-                .to_str()
-                .ok_or_else(|| Invalidutf8Error(aab_path.clone()))
-                .map_err(ApksBuildError::Invalidutf8InPath)?
-        ))
-        .with_arg(&format!(
-            "--output={}",
-            apks_path
-                .to_str()
-                .ok_or_else(|| Invalidutf8Error(apks_path.clone()))
-                .map_err(ApksBuildError::Invalidutf8InPath)?
-        ))
-        .with_arg("--connected-device")
-        .run_and_wait()
-        .map_err(ApksBuildError::BuildFromAabFailed)?;
+        bundletool_command(config)
+            .with_arg("build-apks")
+            .with_arg(format!(
+                "--bundle={}",
+                aab_path
+                    .to_str()
+                    .ok_or_else(|| ApksBuildError::InvalidUtf8InAabPath(aab_path.clone()))?
+            ))
+            .with_arg(&format!(
+                "--output={}",
+                apks_path
+                    .to_str()
+                    .ok_or_else(|| ApksBuildError::InvalidUtf8InApksPath(apks_path.clone()))?
+            ))
+            .with_arg("--connected-device")
+            .run_and_wait()
+            .map_err(ApksBuildError::BuildFromAabFailed)?;
         Ok(())
     }
 
@@ -458,19 +406,16 @@ impl<'a> Device<'a> {
     ) -> Result<(), ApkInstallError> {
         let flavor = self.target.arch;
         let apks_path = Self::apks_path(config, profile, flavor);
-        bossy::Command::impure_parse(
-            bundletool_command_string(config).map_err(ApkInstallError::Invalidutf8InPath)?,
-        )
-        .with_arg("install-apks")
-        .with_arg(format!(
-            "--apks={}",
-            apks_path
-                .to_str()
-                .ok_or_else(|| Invalidutf8Error(apks_path.clone()))
-                .map_err(ApkInstallError::Invalidutf8InPath)?,
-        ))
-        .run_and_wait()
-        .map_err(ApkInstallError::InstallFromAabFailed)?;
+        bundletool_command(config)
+            .with_arg("install-apks")
+            .with_arg(format!(
+                "--apks={}",
+                apks_path
+                    .to_str()
+                    .ok_or_else(|| ApkInstallError::InvalidUtf8InApksPath(apks_path.clone()))?,
+            ))
+            .run_and_wait()
+            .map_err(ApkInstallError::InstallFromAabFailed)?;
         Ok(())
     }
 
@@ -495,7 +440,7 @@ impl<'a> Device<'a> {
             self.clean_apks(config, profile)
                 .map_err(RunError::ApksFromAabBuildError)?;
             self.build_aab(config, env, profile)
-                .map_err(RunError::AabBuildError)?;
+                .map_err(RunError::AabBuildFailed)?;
             self.build_apks_from_aab(config, profile)
                 .map_err(RunError::ApksFromAabBuildError)?;
             self.install_apk_from_aab(config, profile)
