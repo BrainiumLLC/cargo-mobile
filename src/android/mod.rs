@@ -1,6 +1,5 @@
 pub(crate) mod adb;
-#[cfg(not(target_os = "macos"))]
-pub(crate) mod bundletool;
+mod bundletool;
 pub mod cli;
 pub(crate) mod config;
 mod device;
