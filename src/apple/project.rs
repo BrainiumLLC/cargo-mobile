@@ -29,10 +29,6 @@ pub enum Error {
         path: PathBuf,
         cause: std::io::Error,
     },
-    DirChangeFailed {
-        path: PathBuf,
-        source: std::io::Error,
-    },
     XcodegenFailed(bossy::Error),
     PodInstallFailed(bossy::Error),
 }
@@ -55,10 +51,6 @@ impl Reportable for Error {
             Self::DirectoryCreationFailed { path, cause } => Report::error(
                 format!("Failed to create iOS assets directory at {:?}", path),
                 cause,
-            ),
-            Self::DirChangeFailed { path, source } => Report::error(
-                format!("Failed to change current directory to {:?}", path),
-                source,
             ),
             Self::XcodegenFailed(err) => Report::error("Failed to run `xcodegen`", err),
             Self::PodInstallFailed(err) => Report::error("Failed to run `pod install`", err),
@@ -137,15 +129,10 @@ pub fn gen(
         .map_err(Error::XcodegenFailed)?;
 
     if !ios_pods.is_empty() || !macos_pods.is_empty() {
-        std::env::set_current_dir(&dest)
-            .map_err(|source| Error::DirChangeFailed { path: dest, source })?;
         bossy::Command::impure_parse("pod install")
+            .with_arg(format!("--project-directory={}", dest.display()))
             .run_and_wait()
             .map_err(Error::XcodegenFailed)?;
-        std::env::set_current_dir(&rel_prefix).map_err(|source| Error::DirChangeFailed {
-            path: rel_prefix,
-            source,
-        })?;
     }
     Ok(())
 }

@@ -82,6 +82,14 @@ pub fn install_all(
             }
         }
     }
+    {
+        let package = "cocoapods";
+        println!("Installing `{}`...", package);
+        bossy::Command::impure_parse("sudo gem install")
+            .with_arg(package)
+            .run_and_wait()
+            .map_err(|source| Error::InstallFailed { package, source })?;
+    }
     // we definitely don't want to install this on CI...
     if skip_dev_tools.no() {
         let tool_info = DeveloperTools::new()?;
