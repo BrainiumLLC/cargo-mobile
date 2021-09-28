@@ -57,7 +57,7 @@ impl Reportable for Error {
                 cause,
             ),
             Self::DirChangeFailed { path, source } => Report::error(
-                format!("Failed to change current directory {:?}", path),
+                format!("Failed to change current directory to {:?}", path),
                 source,
             ),
             Self::XcodegenFailed(err) => Report::error("Failed to run `xcodegen`", err),
