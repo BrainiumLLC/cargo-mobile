@@ -1,0 +1,20 @@
+# Uncomment the next line to define a global platform for your project
+# platform :ios, '9.0'
+
+target '{{app.name}}_iOS' do
+  # Comment the next line if you don't want to use dynamic frameworks
+  use_frameworks!
+
+  # Pods for {{app.name}}_iOS
+  {{~#each ios-pods}}
+  pod '{{this}}'{{/each}}
+end
+
+target '{{app.name}}_macOS' do
+  # Comment the next line if you don't want to use dynamic frameworks
+  use_frameworks!
+
+  # Pods for {{app.name}}_macOS
+  {{~#each macos-pods}}
+  pod '{{this}}'{{/each}}
+end

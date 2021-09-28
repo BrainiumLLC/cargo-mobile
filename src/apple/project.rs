@@ -30,6 +30,7 @@ pub enum Error {
         cause: std::io::Error,
     },
     XcodegenFailed(bossy::Error),
+    PodInstallFailed(bossy::Error),
 }
 
 impl Reportable for Error {
@@ -52,6 +53,7 @@ impl Reportable for Error {
                 cause,
             ),
             Self::XcodegenFailed(err) => Report::error("Failed to run `xcodegen`", err),
+            Self::PodInstallFailed(err) => Report::error("Failed to run `pod install`", err),
         }
     }
 }
@@ -88,6 +90,8 @@ pub fn gen(
         .expect_local();
 
     let asset_catalogs = metadata.ios().asset_catalogs().unwrap_or_default();
+    let ios_pods = metadata.ios().pods().unwrap_or_default();
+    let macos_pods = metadata.macos().pods().unwrap_or_default();
 
     bike.filter_and_process(
         src,
@@ -97,6 +101,8 @@ pub fn gen(
             map.insert("ios-frameworks", metadata.ios().frameworks());
             map.insert("macos-frameworks", metadata.macos().frameworks());
             map.insert("asset-catalogs", asset_catalogs);
+            map.insert("ios-pods", ios_pods);
+            map.insert("macos-pods", macos_pods);
         },
         filter.fun(),
     )
@@ -121,5 +127,11 @@ pub fn gen(
         .with_arg(dest.join("project.yml"))
         .run_and_wait()
         .map_err(Error::XcodegenFailed)?;
+
+    if !ios_pods.is_empty() || !macos_pods.is_empty() {
+        bossy::Command::impure_parse(format!("(cd {:?} && pod install)", dest))
+            .run_and_wait()
+            .map_err(Error::PodInstallFailed)?;
+    }
     Ok(())
 }
