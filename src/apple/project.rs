@@ -132,7 +132,7 @@ pub fn gen(
         bossy::Command::impure_parse("pod install")
             .with_arg(format!("--project-directory={}", dest.display()))
             .run_and_wait()
-            .map_err(Error::XcodegenFailed)?;
+            .map_err(Error::PodInstallFailed)?;
     }
     Ok(())
 }

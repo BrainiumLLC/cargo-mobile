@@ -35,10 +35,23 @@ pub enum Error {
     VersionLookupFailed(#[from] system_profile::Error),
 }
 
-pub fn install(package: &'static str, reinstall_deps: opts::ReinstallDeps) -> Result<bool, Error> {
+pub fn package_found(package: &'static str) -> Result<bool, Error> {
     let found = util::command_present(package)
         .map_err(|source| Error::PresenceCheckFailed { package, source })?;
     log::info!("package `{}` present: {}", package, found);
+    Ok(found)
+}
+
+pub fn install(package: &'static str, reinstall_deps: opts::ReinstallDeps) -> Result<bool, Error> {
+    install_with_installed_name(package, package, reinstall_deps)
+}
+
+pub fn install_with_installed_name(
+    package: &'static str,
+    installed_name: &'static str,
+    reinstall_deps: opts::ReinstallDeps,
+) -> Result<bool, Error> {
+    let found = package_found(installed_name)?;
     if !found || reinstall_deps.yes() {
         println!("Installing `{}`...", package);
         // reinstall works even if it's not installed yet, and will upgrade
@@ -84,11 +97,22 @@ pub fn install_all(
     }
     {
         let package = "cocoapods";
-        println!("Installing `{}`...", package);
-        bossy::Command::impure_parse("sudo gem install")
+        let installed_name = "pod";
+        let installed_with_brew = bossy::Command::impure_parse("brew list")
             .with_arg(package)
-            .run_and_wait()
-            .map_err(|source| Error::InstallFailed { package, source })?;
+            .run_and_wait_for_output();
+        if installed_with_brew.is_ok() {
+            install_with_installed_name(package, installed_name, reinstall_deps)?;
+        } else {
+            let found = package_found(installed_name)?;
+            if !found || reinstall_deps.yes() {
+                println!("Installing `{}`...", package);
+                bossy::Command::impure_parse("sudo gem install")
+                    .with_arg(package)
+                    .run_and_wait()
+                    .map_err(|source| Error::InstallFailed { package, source })?;
+            }
+        }
     }
     // we definitely don't want to install this on CI...
     if skip_dev_tools.no() {
