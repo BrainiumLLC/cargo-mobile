@@ -204,10 +204,17 @@ impl Config {
     }
 
     pub fn workspace_path(&self) -> PathBuf {
-        self.project_dir().join(format!(
-            "{}.xcodeproj/project.xcworkspace/",
-            self.app.name()
-        ))
+        let root_workspace = self
+            .project_dir()
+            .join(format!("{}.xcworkspace/", self.app.name()));
+        if root_workspace.exists() {
+            root_workspace
+        } else {
+            self.project_dir().join(format!(
+                "{}.xcodeproj/project.xcworkspace/",
+                self.app.name()
+            ))
+        }
     }
 
     pub fn archive_dir(&self) -> PathBuf {
