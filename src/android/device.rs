@@ -62,6 +62,7 @@ pub enum ApksBuildError {
     BuildFromAabFailed(bossy::Error),
     InvalidUtf8InAabPath(PathBuf),
     InvalidUtf8InApksPath(PathBuf),
+    NoInstallationPath(util::NoHomeDir),
 }
 
 impl Reportable for ApksBuildError {
@@ -77,6 +78,9 @@ impl Reportable for ApksBuildError {
                 "AAB path {:?} contained invalid utf-8",
                 format!("{:?}", path),
             ),
+            Self::NoInstallationPath(err) => {
+                Report::error("No valid instalalation path for `bundletool`", err)
+            }
         }
     }
 }
@@ -86,6 +90,7 @@ pub enum ApkInstallError {
     InstallFailed(bossy::Error),
     InstallFromAabFailed(bossy::Error),
     InvalidUtf8InApksPath(PathBuf),
+    NoInstallationPath(util::NoHomeDir),
 }
 
 impl Reportable for ApkInstallError {
@@ -97,6 +102,9 @@ impl Reportable for ApkInstallError {
                 "apks path {:?} contained invalid utf-8",
                 format!("{:?}", path),
             ),
+            Self::NoInstallationPath(err) => {
+                Report::error("No valid instalalation path for `bundletool`", err)
+            }
         }
     }
 }
@@ -297,7 +305,8 @@ impl<'a> Device<'a> {
         let flavor = self.target.arch;
         let apks_path = Self::apks_path(config, profile, flavor);
         let aab_path = Self::aab_path(config, profile, flavor);
-        bundletool::command(config)
+        bundletool::command()
+            .map_err(ApksBuildError::NoInstallationPath)?
             .with_arg("build-apks")
             .with_arg(format!(
                 "--bundle={}",
@@ -324,7 +333,8 @@ impl<'a> Device<'a> {
     ) -> Result<(), ApkInstallError> {
         let flavor = self.target.arch;
         let apks_path = Self::apks_path(config, profile, flavor);
-        bundletool::command(config)
+        bundletool::command()
+            .map_err(ApkInstallError::NoInstallationPath)?
             .with_arg("install-apks")
             .with_arg(format!(
                 "--apks={}",
@@ -355,8 +365,7 @@ impl<'a> Device<'a> {
         reinstall_deps: opts::ReinstallDeps,
     ) -> Result<(), RunError> {
         if build_app_bundle {
-            bundletool::install(config, reinstall_deps)
-                .map_err(RunError::BundletoolInstallFailed)?;
+            bundletool::install(reinstall_deps).map_err(RunError::BundletoolInstallFailed)?;
             self.clean_apks(config, profile)
                 .map_err(RunError::ApksFromAabBuildFailed)?;
             self.build_aab(config, env, profile)

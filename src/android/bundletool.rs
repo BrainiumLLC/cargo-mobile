@@ -1,7 +1,11 @@
 use crate::{
-    android::config::Config,
     opts,
-    util::cli::{Report, Reportable},
+    util::{
+        self,
+        cli::{Report, Reportable},
+        repo::Repo,
+        NoHomeDir,
+    },
 };
 #[cfg(not(target_os = "macos"))]
 use std::path::PathBuf;
@@ -20,8 +24,8 @@ impl BundletoolJarInfo {
         format!("bundletool-all-{}.jar", self.version)
     }
 
-    fn installation_path(&self, config: &Config) -> PathBuf {
-        config.project_dir().join(self.file_name())
+    fn installation_path(&self) -> Result<PathBuf, NoHomeDir> {
+        util::tools_dir().map(|tools_dir| tools_dir.join(self.file_name()))
     }
 
     fn download_url(&self) -> String {
@@ -32,19 +36,20 @@ impl BundletoolJarInfo {
         )
     }
 
-    fn run_command(&self, config: &Config) -> bossy::Command {
-        bossy::Command::impure_parse("java -jar").with_arg(self.installation_path(config))
+    fn run_command(&self) -> Result<bossy::Command, NoHomeDir> {
+        let installation_path = self.installation_path()?;
+        Ok(bossy::Command::impure_parse("java -jar").with_arg(installation_path))
     }
 }
 
-pub fn command(config: &Config) -> bossy::Command {
+pub fn command() -> Result<bossy::Command, NoHomeDir> {
     #[cfg(not(target_os = "macos"))]
     {
-        BUNDLE_TOOL_JAR_INFO.run_command(config)
+        BUNDLE_TOOL_JAR_INFO.run_command()
     }
     #[cfg(target_os = "macos")]
     {
-        bossy::Command::impure("bundletool")
+        Ok(bossy::Command::impure("bundletool"))
     }
 }
 
@@ -71,6 +76,7 @@ pub enum InstallError {
         path: PathBuf,
         cause: std::io::Error,
     },
+    NoInstallationPath(util::NoHomeDir),
 }
 
 #[cfg(not(target_os = "macos"))]
@@ -86,18 +92,30 @@ impl Reportable for InstallError {
                 format!("Failed to copy content into bundletool.jar at {:?}", path),
                 cause,
             ),
+            Self::NoInstallationPath(err) => {
+                Report::error("No valid instalalation path for `bundletool`", err)
+            }
         }
     }
 }
 
-pub fn install(config: &Config, reinstall_deps: opts::ReinstallDeps) -> Result<(), InstallError> {
+pub fn install(reinstall_deps: opts::ReinstallDeps) -> Result<(), InstallError> {
     #[cfg(not(target_os = "macos"))]
     {
-        let jar_path = BUNDLE_TOOL_JAR_INFO.installation_path(config);
+        let jar_path = BUNDLE_TOOL_JAR_INFO
+            .installation_path()
+            .map_err(InstallError::NoInstallationPath)?;
         if !jar_path.exists() || reinstall_deps.yes() {
             let response = ureq::get(&BUNDLE_TOOL_JAR_INFO.download_url())
                 .call()
                 .map_err(InstallError::DownloadFailed)?;
+            let tools_dir = util::tools_dir().expect("unable to find tools dir");
+            std::fs::create_dir_all(&tools_dir).map_err(|cause| {
+                InstallError::JarFileCreationFailed {
+                    path: tools_dir,
+                    cause,
+                }
+            })?;
             let mut out = std::fs::File::create(&jar_path).map_err(|cause| {
                 InstallError::JarFileCreationFailed {
                     path: jar_path.clone(),
