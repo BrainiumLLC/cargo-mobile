@@ -1,9 +1,7 @@
 use crate::{
     opts,
     util::{
-        self,
         cli::{Report, Reportable},
-        repo::Repo,
         NoHomeDir,
     },
 };
@@ -132,7 +130,7 @@ pub fn install(reinstall_deps: opts::ReinstallDeps) -> Result<(), InstallError> 
     }
     #[cfg(target_os = "macos")]
     {
-        crate::apple::deps::install("bundletool", Default::default()).map_err(InstallError)?;
+        crate::apple::deps::install("bundletool", reinstall_deps).map_err(InstallError)?;
     }
     Ok(())
 }
