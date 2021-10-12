@@ -1,6 +1,7 @@
 use crate::{
     opts,
     util::{
+        self,
         cli::{Report, Reportable},
         NoHomeDir,
     },
