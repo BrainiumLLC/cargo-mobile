@@ -23,8 +23,10 @@ impl BundletoolJarInfo {
         format!("bundletool-all-{}.jar", self.version)
     }
 
-    fn installation_path(&self) -> Result<PathBuf, NoHomeDir> {
-        util::tools_dir().map(|tools_dir| tools_dir.join(self.file_name()))
+    fn installation_path(&self) -> PathBuf {
+        util::tools_dir()
+            .map(|tools_dir| tools_dir.join(self.file_name()))
+            .unwrap()
     }
 
     fn download_url(&self) -> String {
@@ -35,20 +37,20 @@ impl BundletoolJarInfo {
         )
     }
 
-    fn run_command(&self) -> Result<bossy::Command, NoHomeDir> {
-        let installation_path = self.installation_path()?;
-        Ok(bossy::Command::impure_parse("java -jar").with_arg(installation_path))
+    fn run_command(&self) -> bossy::Command {
+        let installation_path = self.installation_path();
+        bossy::Command::impure_parse("java -jar").with_arg(installation_path)
     }
 }
 
-pub fn command() -> Result<bossy::Command, NoHomeDir> {
+pub fn command() -> bossy::Command {
     #[cfg(not(target_os = "macos"))]
     {
         BUNDLE_TOOL_JAR_INFO.run_command()
     }
     #[cfg(target_os = "macos")]
     {
-        Ok(bossy::Command::impure("bundletool"))
+        bossy::Command::impure("bundletool")
     }
 }
 
@@ -75,7 +77,6 @@ pub enum InstallError {
         path: PathBuf,
         cause: std::io::Error,
     },
-    NoInstallationPath(util::NoHomeDir),
 }
 
 #[cfg(not(target_os = "macos"))]
@@ -91,9 +92,6 @@ impl Reportable for InstallError {
                 format!("Failed to copy content into bundletool.jar at {:?}", path),
                 cause,
             ),
-            Self::NoInstallationPath(err) => {
-                Report::error("No valid instalalation path for `bundletool`", err)
-            }
         }
     }
 }
@@ -101,9 +99,7 @@ impl Reportable for InstallError {
 pub fn install(reinstall_deps: opts::ReinstallDeps) -> Result<(), InstallError> {
     #[cfg(not(target_os = "macos"))]
     {
-        let jar_path = BUNDLE_TOOL_JAR_INFO
-            .installation_path()
-            .map_err(InstallError::NoInstallationPath)?;
+        let jar_path = BUNDLE_TOOL_JAR_INFO.installation_path();
         if !jar_path.exists() || reinstall_deps.yes() {
             let response = ureq::get(&BUNDLE_TOOL_JAR_INFO.download_url())
                 .call()

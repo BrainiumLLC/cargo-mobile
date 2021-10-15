@@ -20,6 +20,7 @@ use std::{
 };
 
 pub static TEMPLATE_PACK: &str = "android-studio";
+pub static ASSET_PACK_TEMPLATE_PACK: &str = "android-studio-asset-pack";
 
 #[derive(Debug)]
 pub enum Error {
@@ -108,13 +109,21 @@ pub fn gen(
             "Android Studio will not be able to find your asset packs otherwise. The option can be found under \"Run > Edit Configurations > Deploy\"."
         ).print(wrapper);
     }
+
+    let asset_pack_src = Pack::lookup_platform(ASSET_PACK_TEMPLATE_PACK)
+        .map_err(Error::MissingPack)?
+        .expect_local();
     for asset_pack in asset_packs {
-        let pack_dir = dest.join(&asset_pack.name);
-        fs::create_dir_all(&pack_dir).map_err(|cause| Error::DirectoryCreationFailed {
-            path: dest.clone(),
-            cause,
-        })?;
-        write_asset_pack_build_file(&pack_dir, asset_pack);
+        bike.filter_and_process(
+            &asset_pack_src,
+            dest.join(&asset_pack.name),
+            |map| {
+                map.insert("pack-name", &asset_pack.name);
+                map.insert("delivery-type", &asset_pack.delivery_type);
+            },
+            filter.fun(),
+        )
+        .map_err(Error::TemplateProcessingFailed)?;
     }
 
     let dest = dest.join("app/src/main/assets/");
@@ -137,22 +146,4 @@ pub fn gen(
     }
 
     Ok(())
-}
-
-fn write_asset_pack_build_file(dest: &Path, pack_info: &AssetPackInfo) {
-    fs::write(
-        dest.join("build.gradle"),
-        &format!(
-            "apply plugin: 'com.android.asset-pack'
-
-assetPack {{
-    packName = \"{}\"
-    dynamicDelivery {{
-        deliveryType = \"{}\"
-    }}
-}}",
-            pack_info.name, pack_info.delivery_type
-        ),
-    )
-    .expect("unable to write asset pack build.gradle file");
 }

@@ -15,7 +15,7 @@ use crate::{
 };
 use std::{
     fmt::{self, Display},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 fn gradlew(config: &Config, env: &Env) -> bossy::Command {
@@ -60,9 +60,6 @@ impl Reportable for AabBuildError {
 pub enum ApksBuildError {
     CleanFailed(std::io::Error),
     BuildFromAabFailed(bossy::Error),
-    InvalidUtf8InAabPath(PathBuf),
-    InvalidUtf8InApksPath(PathBuf),
-    NoInstallationPath(util::NoHomeDir),
 }
 
 impl Reportable for ApksBuildError {
@@ -70,17 +67,6 @@ impl Reportable for ApksBuildError {
         match self {
             Self::CleanFailed(err) => Report::error("Failed to clean old APKS", err),
             Self::BuildFromAabFailed(err) => Report::error("Failed to build APKS from AAB", err),
-            Self::InvalidUtf8InApksPath(path) => Report::error(
-                "APKS path {:?} contained invalid utf-8",
-                format!("{:?}", path),
-            ),
-            Self::InvalidUtf8InAabPath(path) => Report::error(
-                "AAB path {:?} contained invalid utf-8",
-                format!("{:?}", path),
-            ),
-            Self::NoInstallationPath(err) => {
-                Report::error("No valid instalalation path for `bundletool`", err)
-            }
         }
     }
 }
@@ -89,8 +75,6 @@ impl Reportable for ApksBuildError {
 pub enum ApkInstallError {
     InstallFailed(bossy::Error),
     InstallFromAabFailed(bossy::Error),
-    InvalidUtf8InApksPath(PathBuf),
-    NoInstallationPath(util::NoHomeDir),
 }
 
 impl Reportable for ApkInstallError {
@@ -98,13 +82,6 @@ impl Reportable for ApkInstallError {
         match self {
             Self::InstallFailed(err) => Report::error("Failed to install APK", err),
             Self::InstallFromAabFailed(err) => Report::error("Failed to install APK from AAB", err),
-            Self::InvalidUtf8InApksPath(path) => Report::error(
-                "apks path {:?} contained invalid utf-8",
-                format!("{:?}", path),
-            ),
-            Self::NoInstallationPath(err) => {
-                Report::error("No valid instalalation path for `bundletool`", err)
-            }
         }
     }
 }
@@ -199,7 +176,7 @@ impl<'a> Device<'a> {
     }
 
     fn output_resource_path(
-        output_dir: &str,
+        output_dir: String,
         file_extension: &str,
         config: &Config,
         profile: Profile,
@@ -214,7 +191,7 @@ impl<'a> Device<'a> {
 
     fn apk_path(config: &Config, profile: Profile, flavor: &str) -> PathBuf {
         Self::output_resource_path(
-            &format!("apk/{}/{}", flavor, profile.as_str()),
+            format!("apk/{}/{}", flavor, profile.as_str()),
             "apk",
             config,
             profile,
@@ -224,7 +201,7 @@ impl<'a> Device<'a> {
 
     fn apks_path(config: &Config, profile: Profile, flavor: &str) -> PathBuf {
         Self::output_resource_path(
-            &format!("apk/{}/{}", flavor, profile.as_str()),
+            format!("apk/{}/{}", flavor, profile.as_str()),
             "apks",
             config,
             profile,
@@ -234,7 +211,7 @@ impl<'a> Device<'a> {
 
     fn aab_path(config: &Config, profile: Profile, flavor: &str) -> PathBuf {
         Self::output_resource_path(
-            &format!("bundle/{}{}", flavor, profile.as_str()),
+            format!("bundle/{}{}", flavor, profile.as_str()),
             "aab",
             config,
             profile,
@@ -306,20 +283,9 @@ impl<'a> Device<'a> {
         let apks_path = Self::apks_path(config, profile, flavor);
         let aab_path = Self::aab_path(config, profile, flavor);
         bundletool::command()
-            .map_err(ApksBuildError::NoInstallationPath)?
             .with_arg("build-apks")
-            .with_arg(format!(
-                "--bundle={}",
-                aab_path
-                    .to_str()
-                    .ok_or_else(|| ApksBuildError::InvalidUtf8InAabPath(aab_path.clone()))?
-            ))
-            .with_arg(&format!(
-                "--output={}",
-                apks_path
-                    .to_str()
-                    .ok_or_else(|| ApksBuildError::InvalidUtf8InApksPath(apks_path.clone()))?
-            ))
+            .with_arg(format!("--bundle={}", aab_path.to_str().unwrap()))
+            .with_arg(format!("--output={}", apks_path.to_str().unwrap()))
             .with_arg("--connected-device")
             .run_and_wait()
             .map_err(ApksBuildError::BuildFromAabFailed)?;
@@ -334,14 +300,8 @@ impl<'a> Device<'a> {
         let flavor = self.target.arch;
         let apks_path = Self::apks_path(config, profile, flavor);
         bundletool::command()
-            .map_err(ApkInstallError::NoInstallationPath)?
             .with_arg("install-apks")
-            .with_arg(format!(
-                "--apks={}",
-                apks_path
-                    .to_str()
-                    .ok_or_else(|| ApkInstallError::InvalidUtf8InApksPath(apks_path.clone()))?,
-            ))
+            .with_arg(format!("--apks={}", apks_path.to_str().unwrap(),))
             .run_and_wait()
             .map_err(ApkInstallError::InstallFromAabFailed)?;
         Ok(())
