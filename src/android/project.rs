@@ -1,4 +1,11 @@
-use super::{config::Config, env::Env, ndk, target::Target};
+use path_abs::PathOps;
+
+use super::{
+    config::{Config, Metadata},
+    env::Env,
+    ndk,
+    target::Target,
+};
 use crate::{
     dot_cargo,
     target::TargetTrait as _,
@@ -24,6 +31,12 @@ pub enum Error {
     },
     AssetDirSymlinkFailed(ln::Error),
     DotCargoGenFailed(ndk::MissingToolError),
+    FileCopyFailed {
+        src: PathBuf,
+        dest: PathBuf,
+        cause: std::io::Error,
+    },
+    AssetSourceInvalid(PathBuf),
 }
 
 impl Reportable for Error {
@@ -44,12 +57,21 @@ impl Reportable for Error {
             Self::DotCargoGenFailed(err) => {
                 Report::error("Failed to generate Android cargo config", err)
             }
+            Self::FileCopyFailed { src, dest, cause } => Report::error(
+                format!("Failed to copy file  at {:?} to {:?}", src, dest),
+                cause,
+            ),
+            Self::AssetSourceInvalid(src) => Report::error(
+                format!("Asset source at {:?} invalid", src),
+                "Asset sopurces must end in either a directory or a file",
+            ),
         }
     }
 }
 
 pub fn gen(
     config: &Config,
+    metadata: &Metadata,
     env: &Env,
     bike: &bicycle::Bicycle,
     filter: &templating::Filter,
@@ -70,6 +92,7 @@ pub fn gen(
                 "root-dir-rel",
                 util::relativize_path(config.app().root_dir(), config.project_dir()),
             );
+            map.insert("root-dir", config.app().root_dir());
             map.insert("targets", Target::all().values().collect::<Vec<_>>());
             map.insert("target-names", Target::all().keys().collect::<Vec<_>>());
             map.insert(
@@ -79,10 +102,35 @@ pub fn gen(
                     .map(|target| target.arch)
                     .collect::<Vec<_>>(),
             );
+            map.insert("android-app-plugins", metadata.app_plugins());
+            map.insert(
+                "android-project-dependencies",
+                metadata.project_dependencies(),
+            );
+            map.insert("android-app-dependencies", metadata.app_dependencies());
+            map.insert(
+                "android-app-dependencies-platform",
+                metadata.app_dependencies_platform(),
+            );
         },
         filter.fun(),
     )
     .map_err(Error::TemplateProcessingFailed)?;
+
+    let source_dest = dest.join("app/");
+    for source in metadata.app_sources() {
+        let source_src = config.app().root_dir().join(&source);
+        let source_file = source_src
+            .file_name()
+            .ok_or_else(|| Error::AssetSourceInvalid(source_src.clone()))?;
+        fs::copy(&source_src, source_dest.join(source_file)).map_err(|cause| {
+            Error::FileCopyFailed {
+                src: source_src,
+                dest: source_dest.clone(),
+                cause,
+            }
+        })?;
+    }
 
     let dest = dest.join("app/src/main/assets/");
     fs::create_dir_all(&dest).map_err(|cause| Error::DirectoryCreationFailed {
