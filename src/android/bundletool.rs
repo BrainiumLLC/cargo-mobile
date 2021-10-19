@@ -104,7 +104,7 @@ pub fn install(reinstall_deps: opts::ReinstallDeps) -> Result<(), InstallError> 
             let response = ureq::get(&BUNDLE_TOOL_JAR_INFO.download_url())
                 .call()
                 .map_err(InstallError::DownloadFailed)?;
-            let tools_dir = util::tools_dir().expect("unable to find tools dir");
+            let tools_dir = util::tools_dir().unwrap();
             std::fs::create_dir_all(&tools_dir).map_err(|cause| {
                 InstallError::JarFileCreationFailed {
                     path: tools_dir,

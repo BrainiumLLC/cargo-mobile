@@ -301,7 +301,7 @@ impl<'a> Device<'a> {
         let apks_path = Self::apks_path(config, profile, flavor);
         bundletool::command()
             .with_arg("install-apks")
-            .with_arg(format!("--apks={}", apks_path.to_str().unwrap(),))
+            .with_arg(format!("--apks={}", apks_path.to_str().unwrap()))
             .run_and_wait()
             .map_err(ApkInstallError::InstallFromAabFailed)?;
         Ok(())
