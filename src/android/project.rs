@@ -1,5 +1,3 @@
-use path_abs::PathOps;
-
 use super::{
     config::{Config, Metadata},
     env::Env,
@@ -16,6 +14,7 @@ use crate::{
         ln,
     },
 };
+use path_abs::PathOps;
 use std::{fs, path::PathBuf};
 
 pub static TEMPLATE_PACK: &str = "android-studio";
