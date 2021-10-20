@@ -58,7 +58,7 @@ impl Reportable for Error {
                 Report::error("Failed to generate Android cargo config", err)
             }
             Self::FileCopyFailed { src, dest, cause } => Report::error(
-                format!("Failed to copy file  at {:?} to {:?}", src, dest),
+                format!("Failed to copy file at {:?} to {:?}", src, dest),
                 cause,
             ),
             Self::AssetSourceInvalid(src) => Report::error(
