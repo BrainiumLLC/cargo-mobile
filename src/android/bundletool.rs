@@ -1,10 +1,8 @@
+#[cfg(not(target_os = "macos"))]
+use crate::util;
 use crate::{
     opts,
-    util::{
-        self,
-        cli::{Report, Reportable},
-        NoHomeDir,
-    },
+    util::cli::{Report, Reportable},
 };
 #[cfg(not(target_os = "macos"))]
 use std::path::PathBuf;

@@ -15,7 +15,7 @@ use crate::{
 };
 use std::{
     fmt::{self, Display},
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 fn gradlew(config: &Config, env: &Env) -> bossy::Command {

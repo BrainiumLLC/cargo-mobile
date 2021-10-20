@@ -1,5 +1,5 @@
 use super::{
-    config::{AssetPackInfo, Config, Metadata},
+    config::{Config, Metadata},
     env::Env,
     ndk,
     target::Target,
@@ -14,10 +14,7 @@ use crate::{
         ln,
     },
 };
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use std::{fs, path::PathBuf};
 
 pub static TEMPLATE_PACK: &str = "android-studio";
 pub static ASSET_PACK_TEMPLATE_PACK: &str = "android-studio-asset-pack";
