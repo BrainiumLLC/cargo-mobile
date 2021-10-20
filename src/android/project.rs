@@ -83,9 +83,6 @@ pub fn gen(
         .map_err(Error::MissingPack)?
         .expect_local();
     let dest = config.project_dir();
-    let has_dependencies = metadata.project_dependencies().is_some()
-        || metadata.app_dependencies().is_some()
-        || metadata.app_dependencies_platform().is_some();
     bike.filter_and_process(
         src,
         &dest,
@@ -114,7 +111,12 @@ pub fn gen(
                 "android-app-dependencies-platform",
                 metadata.app_dependencies_platform(),
             );
-            map.insert("has-code", has_dependencies);
+            map.insert(
+                "has-code",
+                metadata.project_dependencies().is_some()
+                    || metadata.app_dependencies().is_some()
+                    || metadata.app_dependencies_platform().is_some(),
+            );
         },
         filter.fun(),
     )
