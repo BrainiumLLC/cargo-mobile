@@ -117,7 +117,7 @@ pub fn gen(
     )
     .map_err(Error::TemplateProcessingFailed)?;
 
-    let source_dest = dest.join("app/");
+    let source_dest = dest.join("app");
     for source in metadata.app_sources() {
         let source_src = config.app().root_dir().join(&source);
         let source_file = source_src
