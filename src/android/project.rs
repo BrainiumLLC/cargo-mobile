@@ -63,7 +63,7 @@ impl Reportable for Error {
             ),
             Self::AssetSourceInvalid(src) => Report::error(
                 format!("Asset source at {:?} invalid", src),
-                "Asset sources must end in either a directory or a file",
+                "Asset sources must be either a directory or a file",
             ),
         }
     }
