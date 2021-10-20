@@ -22,7 +22,6 @@ pub struct Platform {
     vendor_frameworks: Option<Vec<String>>,
     asset_catalogs: Option<Vec<PathBuf>>,
     additional_targets: Option<Vec<PathBuf>>,
-    pods: Option<Vec<PathBuf>>,
 }
 
 impl Platform {
@@ -48,10 +47,6 @@ impl Platform {
 
     pub fn additional_targets(&self) -> Option<&[PathBuf]> {
         self.additional_targets.as_deref()
-    }
-
-    pub fn pods(&self) -> Option<&[PathBuf]> {
-        self.pods.as_deref()
     }
 }
 
