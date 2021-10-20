@@ -57,12 +57,12 @@ impl Reportable for Error {
                 Report::error("Failed to generate Android cargo config", err)
             }
             Self::FileCopyFailed { src, dest, cause } => Report::error(
-                format!("Failed to copy file  at {:?} to {:?}", src, dest),
+                format!("Failed to copy file at {:?} to {:?}", src, dest),
                 cause,
             ),
             Self::AssetSourceInvalid(src) => Report::error(
                 format!("Asset source at {:?} invalid", src),
-                "Asset sopurces must end in either a directory or a file",
+                "Asset sources must be either a directory or a file",
             ),
         }
     }
@@ -116,7 +116,7 @@ pub fn gen(
     )
     .map_err(Error::TemplateProcessingFailed)?;
 
-    let source_dest = dest.join("app/");
+    let source_dest = dest.join("app");
     for source in metadata.app_sources() {
         let source_src = config.app().root_dir().join(&source);
         let source_file = source_src
