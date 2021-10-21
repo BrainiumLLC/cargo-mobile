@@ -95,8 +95,8 @@ pub fn install_all(
         }
     }
     {
-        static PACKAGE: &'static str = "cocoapods";
-        static INSTALLED_NAME: &'static str = "pod";
+        static PACKAGE: &str = "cocoapods";
+        static INSTALLED_NAME: &str = "pod";
         let installed_with_brew = bossy::Command::impure_parse("brew list")
             .with_arg(PACKAGE)
             .run_and_wait_for_output()
