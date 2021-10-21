@@ -51,8 +51,7 @@ pub fn install_with_installed_name(
     installed_name: &'static str,
     reinstall_deps: opts::ReinstallDeps,
 ) -> Result<bool, Error> {
-    let found = package_found(installed_name)?;
-    if !found || reinstall_deps.yes() {
+    if !package_found(installed_name)? || reinstall_deps.yes() {
         println!("Installing `{}`...", package);
         // reinstall works even if it's not installed yet, and will upgrade
         // if it's already installed!
@@ -96,21 +95,24 @@ pub fn install_all(
         }
     }
     {
-        let package = "cocoapods";
-        let installed_name = "pod";
+        static PACKAGE: &'static str = "cocoapods";
+        static INSTALLED_NAME: &'static str = "pod";
         let installed_with_brew = bossy::Command::impure_parse("brew list")
-            .with_arg(package)
-            .run_and_wait_for_output();
-        if installed_with_brew.is_ok() {
-            install_with_installed_name(package, installed_name, reinstall_deps)?;
+            .with_arg(PACKAGE)
+            .run_and_wait_for_output()
+            .is_ok();
+        if installed_with_brew {
+            install_with_installed_name(PACKAGE, INSTALLED_NAME, reinstall_deps)?;
         } else {
-            let found = package_found(installed_name)?;
-            if !found || reinstall_deps.yes() {
-                println!("Installing `{}`...", package);
+            if !package_found(INSTALLED_NAME)? || reinstall_deps.yes() {
+                println!("Installing `{}`...", PACKAGE);
                 bossy::Command::impure_parse("sudo gem install")
-                    .with_arg(package)
+                    .with_arg(PACKAGE)
                     .run_and_wait()
-                    .map_err(|source| Error::InstallFailed { package, source })?;
+                    .map_err(|source| Error::InstallFailed {
+                        package: PACKAGE,
+                        source,
+                    })?;
             }
         }
     }
