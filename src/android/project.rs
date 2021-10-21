@@ -10,7 +10,7 @@ use crate::{
     templating::{self, Pack},
     util::{
         self,
-        cli::{Report, Reportable},
+        cli::{Report, Reportable, TextWrapper},
         ln,
     },
 };
@@ -18,6 +18,7 @@ use path_abs::PathOps;
 use std::{fs, path::PathBuf};
 
 pub static TEMPLATE_PACK: &str = "android-studio";
+pub static ASSET_PACK_TEMPLATE_PACK: &str = "android-studio-asset-pack";
 
 #[derive(Debug)]
 pub enum Error {
@@ -73,6 +74,7 @@ pub fn gen(
     metadata: &Metadata,
     env: &Env,
     bike: &bicycle::Bicycle,
+    wrapper: &TextWrapper,
     filter: &templating::Filter,
     dot_cargo: &mut dot_cargo::DotCargo,
 ) -> Result<(), Error> {
@@ -83,6 +85,8 @@ pub fn gen(
         .map_err(Error::MissingPack)?
         .expect_local();
     let dest = config.project_dir();
+
+    let asset_packs = metadata.asset_packs().unwrap_or_default();
     bike.filter_and_process(
         src,
         &dest,
@@ -117,10 +121,39 @@ pub fn gen(
                     || metadata.app_dependencies().is_some()
                     || metadata.app_dependencies_platform().is_some(),
             );
+            map.insert(
+                "asset-packs",
+                asset_packs
+                    .iter()
+                    .map(|p| p.name.as_str())
+                    .collect::<Vec<_>>(),
+            );
         },
         filter.fun(),
     )
     .map_err(Error::TemplateProcessingFailed)?;
+    if !asset_packs.is_empty() {
+        Report::action_request(
+            "When running from Android Studio, you must first set your deployment option to \"APK from app bundle\".", 
+            "Android Studio will not be able to find your asset packs otherwise. The option can be found under \"Run > Edit Configurations > Deploy\"."
+        ).print(wrapper);
+    }
+
+    let asset_pack_src = Pack::lookup_platform(ASSET_PACK_TEMPLATE_PACK)
+        .map_err(Error::MissingPack)?
+        .expect_local();
+    for asset_pack in asset_packs {
+        bike.filter_and_process(
+            &asset_pack_src,
+            dest.join(&asset_pack.name),
+            |map| {
+                map.insert("pack-name", &asset_pack.name);
+                map.insert("delivery-type", &asset_pack.delivery_type);
+            },
+            filter.fun(),
+        )
+        .map_err(Error::TemplateProcessingFailed)?;
+    }
 
     let source_dest = dest.join("app");
     for source in metadata.app_sources() {
