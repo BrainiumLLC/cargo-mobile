@@ -89,6 +89,8 @@ pub enum Command {
     },
     #[structopt(name = "list", about = "Lists connected devices")]
     List,
+    #[structopt(name = "pod-update", about = "Runs `pod update`")]
+    PodUpdate,
     #[structopt(
         name = "xcode-script",
         about = "Compiles static lib (should only be called by Xcode!)",
@@ -149,6 +151,7 @@ pub enum Error {
     MacosSdkRootInvalid { macos_sdk_root: PathBuf },
     ArchInvalid { arch: String },
     CompileLibFailed(CompileLibError),
+    PodUpdateFailed(bossy::Error),
 }
 
 impl Reportable for Error {
@@ -191,6 +194,7 @@ impl Reportable for Error {
                 format!("{:?} isn't a known arch", arch),
             ),
             Self::CompileLibFailed(err) => err.report(),
+            Self::PodUpdateFailed(err) => Report::error("Failed to run `pod update`", err),
         }
     }
 }
@@ -327,6 +331,16 @@ impl Exec for Input {
                 .map(|device_list| {
                     prompt::list_display_only(device_list.iter(), device_list.len());
                 }),
+            Command::PodUpdate => with_config(non_interactive, wrapper, |config, _| {
+                bossy::Command::impure_parse("pod update")
+                    .with_arg(format!(
+                        "--project-directory={}",
+                        config.project_dir().display()
+                    ))
+                    .run_and_wait()
+                    .map_err(Error::PodUpdateFailed)?;
+                Ok(())
+            }),
             Command::XcodeScript {
                 macos,
                 sdk_root,
