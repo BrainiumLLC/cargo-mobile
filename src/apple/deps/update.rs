@@ -1,4 +1,3 @@
-use super::PACKAGES;
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -43,7 +42,7 @@ pub struct Outdated {
 }
 
 impl Outdated {
-    pub fn load() -> Result<Self, OutdatedError> {
+    pub fn load(packages: &Vec<&str>) -> Result<Self, OutdatedError> {
         #[derive(Deserialize)]
         struct Raw {
             formulae: Vec<Formula>,
@@ -56,14 +55,17 @@ impl Outdated {
             .map(|Raw { formulae }| Self {
                 packages: formulae
                     .into_iter()
-                    .filter(|formula| PACKAGES.contains(&formula.name.as_str()))
+                    .filter(|formula| packages.contains(&formula.name.as_str()))
                     .collect(),
             })
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &'static str> + '_ {
-        self.packages.iter().map(|formula| {
-            PACKAGES
+    pub fn iter<'a>(
+        &'a self,
+        packages: Vec<&'static str>,
+    ) -> impl Iterator<Item = &'static str> + 'a {
+        self.packages.iter().map(move |formula| {
+            packages
                 .iter()
                 // Do a switcheroo to get static lifetimes, just for the dubious
                 // goal of not needing to use `String` in `deps::Error`...
