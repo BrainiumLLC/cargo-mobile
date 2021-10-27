@@ -14,8 +14,6 @@ use crate::{
 use thiserror::Error;
 
 static PACKAGES: &[&str] = &["xcodegen", "ios-deploy"];
-static COCOAPODS: &str = "cocoapods";
-static COCOAPODS_INSTALLED_NAME: &str = "pod";
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -73,16 +71,10 @@ pub fn install_all(
     skip_dev_tools: opts::SkipDevTools,
     reinstall_deps: opts::ReinstallDeps,
 ) -> Result<(), Error> {
-    let cocoapods_installed_with_brew = cocoapods_installed_with_brew(COCOAPODS);
-    let all_brew_packages = if cocoapods_installed_with_brew {
-        [PACKAGES, &[COCOAPODS]].concat()
-    } else {
-        PACKAGES.to_vec()
-    };
-    for package in &all_brew_packages {
+    for package in PACKAGES {
         install(package, reinstall_deps)?;
     }
-    let outdated = Outdated::load(&all_brew_packages)?;
+    let outdated = Outdated::load()?;
     outdated.print_notice();
     if !outdated.is_empty() && non_interactive.no() {
         let answer = loop {
@@ -94,7 +86,7 @@ pub fn install_all(
             }
         };
         if answer.yes() {
-            for package in outdated.iter(all_brew_packages) {
+            for package in outdated.iter() {
                 bossy::Command::impure_parse("brew upgrade")
                     .with_arg(package)
                     .run_and_wait()
@@ -103,34 +95,24 @@ pub fn install_all(
         }
     }
     {
-        if cocoapods_installed_with_brew {
-            install_with_installed_name(COCOAPODS, COCOAPODS_INSTALLED_NAME, reinstall_deps)?;
+        static PACKAGE: &str = "cocoapods";
+        static INSTALLED_NAME: &str = "pod";
+        let installed_with_brew = bossy::Command::impure_parse("brew list")
+            .with_arg(PACKAGE)
+            .run_and_wait_for_output()
+            .is_ok();
+        if installed_with_brew {
+            install_with_installed_name(PACKAGE, INSTALLED_NAME, reinstall_deps)?;
         } else {
-            if !package_found(COCOAPODS_INSTALLED_NAME)? || reinstall_deps.yes() {
-                install_gem(COCOAPODS)?;
-            }
-        }
-        let outdated_gems = bossy::Command::impure_parse("gem outdated")
-            .with_arg(COCOAPODS)
-            .run_and_wait_for_string()
-            .map_err(|source| Error::InstallFailed {
-                package: COCOAPODS,
-                source,
-            })?;
-        if outdated_gems.contains(COCOAPODS) && non_interactive.no() {
-            let answer = loop {
-                if let Some(answer) = prompt::yes_no(
-                    format!(
-                        "Would you like the {:?} dependency to be updated for you?",
-                        COCOAPODS
-                    ),
-                    Some(prompt::YesOrNo::Yes),
-                )? {
-                    break answer;
-                }
-            };
-            if answer.yes() {
-                install_gem(COCOAPODS)?;
+            if !package_found(INSTALLED_NAME)? || reinstall_deps.yes() {
+                println!("Installing `{}`...", PACKAGE);
+                bossy::Command::impure_parse("sudo gem install")
+                    .with_arg(PACKAGE)
+                    .run_and_wait()
+                    .map_err(|source| Error::InstallFailed {
+                        package: PACKAGE,
+                        source,
+                    })?;
             }
         }
     }
@@ -148,24 +130,4 @@ pub fn install_all(
         }
     }
     Ok(())
-}
-
-fn install_gem(package: &'static str) -> Result<(), Error> {
-    println!("Installing `{}`...", package);
-    bossy::Command::impure_parse("sudo gem install")
-        .with_arg(package)
-        .with_stderr_null()
-        .run_and_wait()
-        .map_err(|source| Error::InstallFailed {
-            package: package,
-            source,
-        })?;
-    Ok(())
-}
-
-fn cocoapods_installed_with_brew(package: &str) -> bool {
-    bossy::Command::impure_parse("brew list")
-        .with_arg(package)
-        .run_and_wait_for_output()
-        .is_ok()
 }
