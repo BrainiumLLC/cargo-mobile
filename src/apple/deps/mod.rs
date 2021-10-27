@@ -112,7 +112,6 @@ pub fn install_all(
         }
         let outdated_gems = bossy::Command::impure_parse("gem outdated")
             .with_arg(COCOAPODS)
-            .with_stderr_null()
             .run_and_wait_for_string()
             .map_err(|source| Error::InstallFailed {
                 package: COCOAPODS,
