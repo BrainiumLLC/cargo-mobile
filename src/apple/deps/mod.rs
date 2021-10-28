@@ -87,22 +87,7 @@ pub fn install(package: &PackageSpec, reinstall_deps: opts::ReinstallDeps) -> Re
         println!("Installing `{}`...", package.pkg_name);
         match package.package_source {
             PackageSource::Brew => brew_reinstall(package.pkg_name)?,
-            PackageSource::BrewOrGem => {
-                let package_updated = update_package(package.pkg_name)?;
-                if !package_updated {
-                    println!(
-                        "`sudo` is required to install the {:?} gem dependency",
-                        package.pkg_name
-                    );
-                    bossy::Command::impure_parse("sudo gem install")
-                        .with_arg(package.pkg_name)
-                        .run_and_wait()
-                        .map_err(|source| Error::InstallFailed {
-                            package: package.pkg_name,
-                            source,
-                        })?;
-                }
-            }
+            PackageSource::BrewOrGem => update_package(package.pkg_name)?,
         }
         Ok(true)
     } else {
@@ -133,10 +118,7 @@ pub fn install_all(
         };
         if answer.yes() {
             for package in outdated.iter() {
-                let package_updated = update_package(package)?;
-                if !package_updated {
-                    panic!("developer error: attempted to update package {:?}, but it's not currently installed", package);
-                }
+                update_package(package)?;
             }
         }
     }
@@ -181,17 +163,30 @@ fn brew_reinstall(package: &'static str) -> Result<(), Error> {
     Ok(())
 }
 
-fn update_package(package: &'static str) -> Result<bool, Error> {
-    if installed_with_brew(package) {
-        brew_reinstall(package)?;
-        Ok(true)
-    } else if installed_with_gem(package) {
+fn gem_reinstall(package: &'static str) -> Result<(), Error> {
+    if installed_with_gem(package) {
         bossy::Command::impure_parse("gem update")
             .with_arg(package)
             .run_and_wait()
             .map_err(|source| Error::InstallFailed { package, source })?;
-        Ok(true)
     } else {
-        Ok(false)
+        println!(
+            "`sudo` is required to install the {:?} gem dependency",
+            package
+        );
+        bossy::Command::impure_parse("sudo gem install")
+            .with_arg(package)
+            .run_and_wait()
+            .map_err(|source| Error::InstallFailed { package, source })?;
     }
+    Ok(())
+}
+
+fn update_package(package: &'static str) -> Result<(), Error> {
+    if installed_with_brew(package) {
+        brew_reinstall(package)?;
+    } else {
+        gem_reinstall(package)?;
+    }
+    Ok(())
 }
