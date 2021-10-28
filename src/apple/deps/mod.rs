@@ -13,7 +13,33 @@ use crate::{
 };
 use thiserror::Error;
 
-static PACKAGES: &[&str] = &["xcodegen", "ios-deploy"];
+pub enum PackageSource {
+    Brew,
+    BrewOrGem,
+}
+
+pub struct PackageData {
+    pub pkg_name: &'static str,
+    pub bin_name: &'static str,
+    pub package_source: PackageSource,
+}
+static PACKAGES: &[PackageData] = &[
+    PackageData {
+        pkg_name: "xcodegen",
+        bin_name: "xcodegen",
+        package_source: PackageSource::Brew,
+    },
+    PackageData {
+        pkg_name: "ios-deploy",
+        bin_name: "ios-deploy",
+        package_source: PackageSource::Brew,
+    },
+    PackageData {
+        pkg_name: "cocoapods",
+        bin_name: "pod",
+        package_source: PackageSource::BrewOrGem,
+    },
+];
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -42,23 +68,25 @@ pub fn package_found(package: &'static str) -> Result<bool, Error> {
     Ok(found)
 }
 
-pub fn install(package: &'static str, reinstall_deps: opts::ReinstallDeps) -> Result<bool, Error> {
-    install_with_installed_name(package, package, reinstall_deps)
-}
-
-pub fn install_with_installed_name(
-    package: &'static str,
-    installed_name: &'static str,
-    reinstall_deps: opts::ReinstallDeps,
-) -> Result<bool, Error> {
-    if !package_found(installed_name)? || reinstall_deps.yes() {
-        println!("Installing `{}`...", package);
-        // reinstall works even if it's not installed yet, and will upgrade
-        // if it's already installed!
-        bossy::Command::impure_parse("brew reinstall")
-            .with_arg(package)
-            .run_and_wait()
-            .map_err(|source| Error::InstallFailed { package, source })?;
+pub fn install(package: &PackageData, reinstall_deps: opts::ReinstallDeps) -> Result<bool, Error> {
+    if !package_found(package.bin_name)? || reinstall_deps.yes() {
+        println!("Installing `{}`...", package.pkg_name);
+        match package.package_source {
+            PackageSource::Brew => brew_reinstall(package.pkg_name)?,
+            PackageSource::BrewOrGem => {
+                let package_updated = update_package(package.pkg_name)?;
+                if !package_updated {
+                    bossy::Command::impure_parse("sudo gem install")
+                        .with_arg(package.pkg_name)
+                        .with_stderr_null()
+                        .run_and_wait()
+                        .map_err(|source| Error::InstallFailed {
+                            package: package.pkg_name,
+                            source,
+                        })?;
+                }
+            }
+        }
         Ok(true)
     } else {
         Ok(false)
@@ -87,32 +115,10 @@ pub fn install_all(
         };
         if answer.yes() {
             for package in outdated.iter() {
-                bossy::Command::impure_parse("brew upgrade")
-                    .with_arg(package)
-                    .run_and_wait()
-                    .map_err(|source| Error::InstallFailed { package, source })?;
-            }
-        }
-    }
-    {
-        static PACKAGE: &str = "cocoapods";
-        static INSTALLED_NAME: &str = "pod";
-        let installed_with_brew = bossy::Command::impure_parse("brew list")
-            .with_arg(PACKAGE)
-            .run_and_wait_for_output()
-            .is_ok();
-        if installed_with_brew {
-            install_with_installed_name(PACKAGE, INSTALLED_NAME, reinstall_deps)?;
-        } else {
-            if !package_found(INSTALLED_NAME)? || reinstall_deps.yes() {
-                println!("Installing `{}`...", PACKAGE);
-                bossy::Command::impure_parse("sudo gem install")
-                    .with_arg(PACKAGE)
-                    .run_and_wait()
-                    .map_err(|source| Error::InstallFailed {
-                        package: PACKAGE,
-                        source,
-                    })?;
+                let package_updated = update_package(package)?;
+                if !package_updated {
+                    panic!("developer error: attemped updating package {:?}, which has not been installed", package);
+                }
             }
         }
     }
@@ -130,4 +136,44 @@ pub fn install_all(
         }
     }
     Ok(())
+}
+
+fn installed_with_brew(package: &str) -> bool {
+    bossy::Command::impure_parse("brew list")
+        .with_arg(package)
+        .run_and_wait_for_output()
+        .is_ok()
+}
+
+fn installed_with_gem(package: &str) -> bool {
+    let output = bossy::Command::impure_parse("brew list")
+        .with_arg(package)
+        .run_and_wait_for_string();
+
+    output.is_ok() && output.unwrap().contains(package)
+}
+
+fn brew_reinstall(package: &'static str) -> Result<(), Error> {
+    // reinstall works even if it's not installed yet, and will upgrade
+    // if it's already installed!
+    bossy::Command::impure_parse("brew reinstall")
+        .with_arg(package)
+        .run_and_wait()
+        .map_err(|source| Error::InstallFailed { package, source })?;
+    Ok(())
+}
+
+fn update_package(package: &'static str) -> Result<bool, Error> {
+    if installed_with_brew(package) {
+        brew_reinstall(package)?;
+        Ok(true)
+    } else if installed_with_gem(package) {
+        bossy::Command::impure_parse("gem update")
+            .with_arg(package)
+            .run_and_wait()
+            .map_err(|source| Error::InstallFailed { package, source })?;
+        Ok(true)
+    } else {
+        Ok(false)
+    }
 }
