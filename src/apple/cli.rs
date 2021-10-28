@@ -202,7 +202,7 @@ impl Reportable for Error {
                 format!("{:?} isn't a known arch", arch),
             ),
             Self::CompileLibFailed(err) => err.report(),
-            Self::PodCommandFailed(err) => Report::error("Failed to run `pod  <args>`", err),
+            Self::PodCommandFailed(err) => Report::error("pod command failed", err),
         }
     }
 }

@@ -18,27 +18,46 @@ pub enum PackageSource {
     BrewOrGem,
 }
 
-pub struct PackageData {
+pub struct PackageSpec {
     pub pkg_name: &'static str,
     pub bin_name: &'static str,
     pub package_source: PackageSource,
 }
-static PACKAGES: &[PackageData] = &[
-    PackageData {
-        pkg_name: "xcodegen",
-        bin_name: "xcodegen",
-        package_source: PackageSource::Brew,
-    },
-    PackageData {
-        pkg_name: "ios-deploy",
-        bin_name: "ios-deploy",
-        package_source: PackageSource::Brew,
-    },
-    PackageData {
-        pkg_name: "cocoapods",
-        bin_name: "pod",
-        package_source: PackageSource::BrewOrGem,
-    },
+
+impl PackageSpec {
+    pub const fn brew(pkg_name: &'static str) -> Self {
+        PackageSpec {
+            pkg_name,
+            bin_name: pkg_name,
+            package_source: PackageSource::Brew,
+        }
+    }
+    pub const fn brew_or_gem(pkg_name: &'static str) -> Self {
+        PackageSpec {
+            pkg_name,
+            bin_name: pkg_name,
+            package_source: PackageSource::BrewOrGem,
+        }
+    }
+    pub const fn with_bin_name(mut self, bin_name: &'static str) -> Self {
+        self.bin_name = bin_name;
+        self
+    }
+    pub fn found(&self) -> Result<bool, Error> {
+        let found =
+            util::command_present(self.bin_name).map_err(|source| Error::PresenceCheckFailed {
+                package: self.pkg_name,
+                source,
+            })?;
+        log::info!("package `{}` present: {}", self.pkg_name, found);
+        Ok(found)
+    }
+}
+
+static PACKAGES: &[PackageSpec] = &[
+    PackageSpec::brew("xcodegen"),
+    PackageSpec::brew("ios-deploy"),
+    PackageSpec::brew_or_gem("cocoapods").with_bin_name("pod"),
 ];
 
 #[derive(Debug, Error)]
@@ -59,26 +78,24 @@ pub enum Error {
     PromptFailed(#[from] std::io::Error),
     #[error(transparent)]
     VersionLookupFailed(#[from] system_profile::Error),
+    #[error("Failed to update package `{package}`")]
+    PackageNotUpdated { package: &'static str },
 }
 
-pub fn package_found(package: &'static str) -> Result<bool, Error> {
-    let found = util::command_present(package)
-        .map_err(|source| Error::PresenceCheckFailed { package, source })?;
-    log::info!("package `{}` present: {}", package, found);
-    Ok(found)
-}
-
-pub fn install(package: &PackageData, reinstall_deps: opts::ReinstallDeps) -> Result<bool, Error> {
-    if !package_found(package.bin_name)? || reinstall_deps.yes() {
+pub fn install(package: &PackageSpec, reinstall_deps: opts::ReinstallDeps) -> Result<bool, Error> {
+    if !package.found()? || reinstall_deps.yes() {
         println!("Installing `{}`...", package.pkg_name);
         match package.package_source {
             PackageSource::Brew => brew_reinstall(package.pkg_name)?,
             PackageSource::BrewOrGem => {
                 let package_updated = update_package(package.pkg_name)?;
                 if !package_updated {
+                    println!(
+                        "`sudo` is required to install the {:?} gem dependency",
+                        package.pkg_name
+                    );
                     bossy::Command::impure_parse("sudo gem install")
                         .with_arg(package.pkg_name)
-                        .with_stderr_null()
                         .run_and_wait()
                         .map_err(|source| Error::InstallFailed {
                             package: package.pkg_name,
@@ -99,6 +116,7 @@ pub fn install_all(
     skip_dev_tools: opts::SkipDevTools,
     reinstall_deps: opts::ReinstallDeps,
 ) -> Result<(), Error> {
+    // TODO: Figure out some package data we can cache here. It's a bit slow
     for package in PACKAGES {
         install(package, reinstall_deps)?;
     }
@@ -117,7 +135,7 @@ pub fn install_all(
             for package in outdated.iter() {
                 let package_updated = update_package(package)?;
                 if !package_updated {
-                    panic!("developer error: attemped updating package {:?}, which has not been installed", package);
+                    panic!("developer error: attempted to update package {:?}, but it's not currently installed", package);
                 }
             }
         }
@@ -146,11 +164,11 @@ fn installed_with_brew(package: &str) -> bool {
 }
 
 fn installed_with_gem(package: &str) -> bool {
-    let output = bossy::Command::impure_parse("brew list")
+    bossy::Command::impure_parse("gem list")
         .with_arg(package)
-        .run_and_wait_for_string();
-
-    output.is_ok() && output.unwrap().contains(package)
+        .run_and_wait_for_string()
+        .map(|result| result.contains(package))
+        .unwrap_or(false)
 }
 
 fn brew_reinstall(package: &'static str) -> Result<(), Error> {

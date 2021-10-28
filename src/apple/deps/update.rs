@@ -1,5 +1,7 @@
-use super::{installed_with_brew, installed_with_gem, PACKAGES};
+use super::{installed_with_gem, PACKAGES};
+use once_cell_regex::{exports::regex::Captures, regex};
 use serde::Deserialize;
+use std::collections::hash_set::HashSet;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -54,25 +56,19 @@ impl Outdated {
         let package_names = PACKAGES
             .iter()
             .map(|info| info.pkg_name)
-            .collect::<Vec<_>>();
+            .collect::<HashSet<_>>();
 
         let gem_outdated = bossy::Command::impure_parse("gem outdated")
             .run_and_wait_for_string()
             .map_err(OutdatedError::CommandFailed)?;
-        let gem_outdated = gem_outdated
-            .split("\n")
-            .filter(|string| !string.is_empty())
+        let gem_needs_update = gem_outdated
+            .lines()
+            .filter(|name| {
+                !name.is_empty() && installed_with_gem(name) && gem_outdated.contains(name)
+            })
             .collect::<Vec<_>>();
-        let gem_needs_update = package_names
-            .iter()
-            .filter(|name| installed_with_gem(name) && gem_outdated.contains(name))
-            .collect::<Vec<_>>();
-        let mut gem_formulas = gem_needs_update
-            .iter()
-            .map(|string| parse_gem_outdated_string(string))
-            .collect::<Result<Vec<_>, _>>()?;
 
-        let mut brew_formulas = bossy::Command::impure_parse("brew outdated --json=v2")
+        let packages = bossy::Command::impure_parse("brew outdated --json=v2")
             .run_and_wait_for_output()
             .map_err(OutdatedError::CommandFailed)
             .and_then(|output| serde_json::from_slice(output.stdout()).map_err(Into::into))
@@ -80,14 +76,16 @@ impl Outdated {
                 formulae
                     .into_iter()
                     .filter(|formula| package_names.contains(&formula.name.as_str()))
-                    .collect::<Vec<_>>()
-            })?;
+                    .map(|result| Ok(result))
+            })?
+            .chain(
+                gem_needs_update
+                    .iter()
+                    .map(|string| parse_gem_outdated_string(string)),
+            )
+            .collect::<Result<Vec<Formula>, _>>()?;
 
-        brew_formulas.append(&mut gem_formulas);
-
-        Ok(Self {
-            packages: brew_formulas,
-        })
+        Ok(Self { packages })
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &'static str> + '_ {
@@ -121,62 +119,41 @@ impl Outdated {
 
 #[derive(Debug, Error)]
 pub enum RegexError {
-    #[error("Failed to match string {string:?} using pattern {regex:?}")]
-    MatchFailed { string: String, regex: regex::Regex },
-    #[error("capture group {group} failed for string {string:?} using pattern {regex:?}")]
-    InvalidCaptureGroup {
-        string: String,
-        regex: regex::Regex,
-        group: usize,
-    },
+    #[error("Failed to match regex in string {revision:?}")]
+    SearchFailed { revision: String },
+    #[error("capture group {group:?} failed for string {string:?}")]
+    InvalidCaptureGroup { group: String, string: String },
 }
 
-fn parse_gem_outdated_string(s: &str) -> Result<Formula, RegexError> {
-    let regex =
-        regex::Regex::new(r"(.*) \(([0-9]+.[0-9]+.[0-9]+) < ([0-9]+.[0-9]+.[0-9]+)\)").unwrap();
-    let caps = regex.captures(s).ok_or_else(|| RegexError::MatchFailed {
-        string: s.to_string(),
-        regex: regex.clone(),
-    })?;
+fn parse_gem_outdated_string(revision: &str) -> Result<Formula, RegexError> {
+    let caps = regex!(r"(?P<name>.+) \((?P<installed_version>.+) < (?P<latest_version>.+)\)")
+        .captures(revision)
+        .ok_or_else(|| RegexError::SearchFailed {
+            revision: revision.to_owned(),
+        })?;
 
-    let group = 1;
-    let name = caps
-        .get(group)
-        .ok_or_else(|| RegexError::InvalidCaptureGroup {
-            string: s.to_string(),
-            regex: regex.clone(),
-            group,
-        })?
-        .as_str()
-        .to_string();
-
-    let group = 2;
-    let installed_version = caps
-        .get(group)
-        .ok_or_else(|| RegexError::InvalidCaptureGroup {
-            string: s.to_string(),
-            regex: regex.clone(),
-            group,
-        })?
-        .as_str()
-        .parse()
-        .unwrap();
-
-    let group = 3;
-    let current_version = caps
-        .get(group)
-        .ok_or_else(|| RegexError::InvalidCaptureGroup {
-            string: s.to_string(),
-            regex,
-            group,
-        })?
-        .as_str()
-        .parse()
-        .unwrap();
+    let name = get_string_for_group(&caps, "name", revision)?;
+    let installed_version = get_string_for_group(&caps, "installed_version", revision)?;
+    let current_version = get_string_for_group(&caps, "current_version", revision)?;
 
     Ok(Formula {
         name,
         installed_versions: vec![installed_version],
         current_version,
     })
+}
+
+fn get_string_for_group(
+    caps: &Captures<'_>,
+    group: &str,
+    string: &str,
+) -> Result<String, RegexError> {
+    Ok(caps
+        .name(group)
+        .ok_or_else(|| RegexError::InvalidCaptureGroup {
+            group: group.to_string(),
+            string: string.to_string(),
+        })?
+        .as_str()
+        .to_owned())
 }

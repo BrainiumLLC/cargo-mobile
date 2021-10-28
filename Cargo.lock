@@ -157,7 +157,6 @@ dependencies = [
  "once-cell-regex 0.2.1",
  "openssl",
  "path_abs",
- "regex",
  "reserved-names",
  "rstest",
  "serde",
