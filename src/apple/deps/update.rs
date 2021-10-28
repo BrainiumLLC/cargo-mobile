@@ -61,12 +61,6 @@ impl Outdated {
         let gem_outdated = bossy::Command::impure_parse("gem outdated")
             .run_and_wait_for_string()
             .map_err(OutdatedError::CommandFailed)?;
-        let gem_needs_update = gem_outdated
-            .lines()
-            .filter(|name| {
-                !name.is_empty() && installed_with_gem(name) && gem_outdated.contains(name)
-            })
-            .collect::<Vec<_>>();
 
         let packages = bossy::Command::impure_parse("brew outdated --json=v2")
             .run_and_wait_for_output()
@@ -79,8 +73,11 @@ impl Outdated {
                     .map(|result| Ok(result))
             })?
             .chain(
-                gem_needs_update
-                    .iter()
+                gem_outdated
+                    .lines()
+                    .filter(|name| {
+                        !name.is_empty() && installed_with_gem(name) && gem_outdated.contains(name)
+                    })
                     .map(|string| parse_gem_outdated_string(string)),
             )
             .collect::<Result<Vec<Formula>, _>>()?;
