@@ -11,6 +11,8 @@ use crate::{
         prompt,
     },
 };
+use once_cell_regex::regex;
+use std::collections::hash_set::HashSet;
 use thiserror::Error;
 
 pub enum PackageSource {
@@ -80,14 +82,22 @@ pub enum Error {
     VersionLookupFailed(#[from] system_profile::Error),
     #[error("Failed to update package `{package}`")]
     PackageNotUpdated { package: &'static str },
+    #[error("Failed to list installed gems: {0}")]
+    GemListFailed(#[from] bossy::Error),
+    #[error("Regex match failed for output of `gem list`")]
+    RegexMatchFailed,
 }
 
-pub fn install(package: &PackageSpec, reinstall_deps: opts::ReinstallDeps) -> Result<bool, Error> {
+pub fn install(
+    package: &PackageSpec,
+    reinstall_deps: opts::ReinstallDeps,
+    gem_cache: Option<&HashSet<String>>,
+) -> Result<bool, Error> {
     if !package.found()? || reinstall_deps.yes() {
         println!("Installing `{}`...", package.pkg_name);
         match package.package_source {
             PackageSource::Brew => brew_reinstall(package.pkg_name)?,
-            PackageSource::BrewOrGem => update_package(package.pkg_name)?,
+            PackageSource::BrewOrGem => update_package(package.pkg_name, gem_cache)?,
         }
         Ok(true)
     } else {
@@ -101,11 +111,11 @@ pub fn install_all(
     skip_dev_tools: opts::SkipDevTools,
     reinstall_deps: opts::ReinstallDeps,
 ) -> Result<(), Error> {
-    // TODO: Figure out some package data we can cache here. It's a bit slow
+    let gem_cache = create_gems_cache()?;
     for package in PACKAGES {
-        install(package, reinstall_deps)?;
+        install(package, reinstall_deps, Some(&gem_cache))?;
     }
-    let outdated = Outdated::load()?;
+    let outdated = Outdated::load(Some(&gem_cache))?;
     outdated.print_notice();
     if !outdated.is_empty() && non_interactive.no() {
         let answer = loop {
@@ -118,7 +128,7 @@ pub fn install_all(
         };
         if answer.yes() {
             for package in outdated.iter() {
-                update_package(package)?;
+                update_package(package, Some(&gem_cache))?;
             }
         }
     }
@@ -145,14 +155,6 @@ fn installed_with_brew(package: &str) -> bool {
         .is_ok()
 }
 
-fn installed_with_gem(package: &str) -> bool {
-    bossy::Command::impure_parse("gem list")
-        .with_arg(package)
-        .run_and_wait_for_string()
-        .map(|result| result.contains(package))
-        .unwrap_or(false)
-}
-
 fn brew_reinstall(package: &'static str) -> Result<(), Error> {
     // reinstall works even if it's not installed yet, and will upgrade
     // if it's already installed!
@@ -163,8 +165,38 @@ fn brew_reinstall(package: &'static str) -> Result<(), Error> {
     Ok(())
 }
 
-fn gem_reinstall(package: &'static str) -> Result<(), Error> {
-    if installed_with_gem(package) {
+fn create_gems_cache() -> Result<HashSet<String>, Error> {
+    let gems = bossy::Command::impure_parse("gem list")
+        .run_and_wait_for_string()
+        .map_err(Error::GemListFailed)?;
+
+    gems.lines()
+        .map(|string| regex!(r"(?P<name>.+) \(.+\)").captures(string))
+        .filter_map(|opt| opt)
+        .map(|caps| {
+            Ok(caps
+                .name("name")
+                .ok_or_else(|| Error::RegexMatchFailed)?
+                .as_str()
+                .to_owned())
+        })
+        .collect::<Result<HashSet<_>, Error>>()
+}
+
+fn installed_with_gem(package: &str, gem_cache: Option<&HashSet<String>>) -> bool {
+    if gem_cache.is_some() {
+        gem_cache.unwrap().contains(package)
+    } else {
+        bossy::Command::impure_parse("gem list")
+            .with_arg(package)
+            .run_and_wait_for_string()
+            .map(|result| result.contains(package))
+            .unwrap_or(false)
+    }
+}
+
+fn gem_reinstall(package: &'static str, gem_cache: Option<&HashSet<String>>) -> Result<(), Error> {
+    if installed_with_gem(package, gem_cache) {
         bossy::Command::impure_parse("gem update")
             .with_arg(package)
             .run_and_wait()
@@ -182,11 +214,11 @@ fn gem_reinstall(package: &'static str) -> Result<(), Error> {
     Ok(())
 }
 
-fn update_package(package: &'static str) -> Result<(), Error> {
+fn update_package(package: &'static str, gem_cache: Option<&HashSet<String>>) -> Result<(), Error> {
     if installed_with_brew(package) {
         brew_reinstall(package)?;
     } else {
-        gem_reinstall(package)?;
+        gem_reinstall(package, gem_cache)?;
     }
     Ok(())
 }

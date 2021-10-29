@@ -47,7 +47,7 @@ pub struct Outdated {
 }
 
 impl Outdated {
-    pub fn load() -> Result<Self, OutdatedError> {
+    pub fn load(gem_cache: Option<&HashSet<String>>) -> Result<Self, OutdatedError> {
         #[derive(Deserialize)]
         struct Raw {
             formulae: Vec<Formula>,
@@ -76,7 +76,9 @@ impl Outdated {
                 gem_outdated
                     .lines()
                     .filter(|name| {
-                        !name.is_empty() && installed_with_gem(name) && gem_outdated.contains(name)
+                        !name.is_empty()
+                            && installed_with_gem(name, gem_cache)
+                            && gem_outdated.contains(name)
                     })
                     .map(|string| parse_gem_outdated_string(string)),
             )
