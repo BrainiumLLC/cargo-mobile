@@ -91,7 +91,7 @@ pub enum Error {
 pub fn install(
     package: &PackageSpec,
     reinstall_deps: opts::ReinstallDeps,
-    gem_cache: Option<&HashSet<String>>,
+    gem_cache: &mut GemCache,
 ) -> Result<bool, Error> {
     if !package.found()? || reinstall_deps.yes() {
         println!("Installing `{}`...", package.pkg_name);
@@ -111,11 +111,11 @@ pub fn install_all(
     skip_dev_tools: opts::SkipDevTools,
     reinstall_deps: opts::ReinstallDeps,
 ) -> Result<(), Error> {
-    let gem_cache = create_gems_cache()?;
+    let mut gem_cache = GemCache::new();
     for package in PACKAGES {
-        install(package, reinstall_deps, Some(&gem_cache))?;
+        install(package, reinstall_deps, &mut gem_cache)?;
     }
-    let outdated = Outdated::load(Some(&gem_cache))?;
+    let outdated = Outdated::load(&mut gem_cache)?;
     outdated.print_notice();
     if !outdated.is_empty() && non_interactive.no() {
         let answer = loop {
@@ -128,7 +128,7 @@ pub fn install_all(
         };
         if answer.yes() {
             for package in outdated.iter() {
-                update_package(package, Some(&gem_cache))?;
+                update_package(package, &mut gem_cache)?;
             }
         }
     }
@@ -165,60 +165,75 @@ fn brew_reinstall(package: &'static str) -> Result<(), Error> {
     Ok(())
 }
 
-fn create_gems_cache() -> Result<HashSet<String>, Error> {
-    let gems = bossy::Command::impure_parse("gem list")
-        .run_and_wait_for_string()
-        .map_err(Error::GemListFailed)?;
-
-    gems.lines()
-        .map(|string| regex!(r"(?P<name>.+) \(.+\)").captures(string))
-        .filter_map(|opt| opt)
-        .map(|caps| {
-            Ok(caps
-                .name("name")
-                .ok_or_else(|| Error::RegexMatchFailed)?
-                .as_str()
-                .to_owned())
-        })
-        .collect::<Result<HashSet<_>, Error>>()
+pub struct GemCache {
+    set: HashSet<String>,
 }
 
-fn installed_with_gem(package: &str, gem_cache: Option<&HashSet<String>>) -> bool {
-    if gem_cache.is_some() {
-        gem_cache.unwrap().contains(package)
-    } else {
-        bossy::Command::impure_parse("gem list")
-            .with_arg(package)
-            .run_and_wait_for_string()
-            .map(|result| result.contains(package))
-            .unwrap_or(false)
+impl GemCache {
+    pub fn new() -> Self {
+        Self {
+            set: HashSet::new(),
+        }
+    }
+
+    pub fn initialize(&mut self) -> Result<(), Error> {
+        if self.set.is_empty() {
+            let gems = bossy::Command::impure_parse("gem list")
+                .run_and_wait_for_string()
+                .map_err(Error::GemListFailed)?;
+
+            let set = gems
+                .lines()
+                .map(|string| regex!(r"(?P<name>.+) \(.+\)").captures(string))
+                .filter_map(|opt| opt)
+                .map(|caps| {
+                    Ok(caps
+                        .name("name")
+                        .ok_or_else(|| Error::RegexMatchFailed)?
+                        .as_str()
+                        .to_owned())
+                })
+                .collect::<Result<HashSet<_>, Error>>()?;
+
+            self.set = set;
+        }
+        Ok(())
+    }
+
+    pub fn contains(&mut self, package: &str) -> Result<bool, Error> {
+        self.initialize()?;
+        Ok(self.set.contains(package))
+    }
+
+    pub fn contains_unchecked(&self, package: &str) -> bool {
+        self.set.contains(package)
+    }
+
+    pub fn reinstall(&mut self, package: &'static str) -> Result<(), Error> {
+        if self.contains(package)? {
+            bossy::Command::impure_parse("gem update")
+                .with_arg(package)
+                .run_and_wait()
+                .map_err(|source| Error::InstallFailed { package, source })?;
+        } else {
+            println!(
+                "`sudo` is required to install the {:?} gem dependency",
+                package
+            );
+            bossy::Command::impure_parse("sudo gem install")
+                .with_arg(package)
+                .run_and_wait()
+                .map_err(|source| Error::InstallFailed { package, source })?;
+        }
+        Ok(())
     }
 }
 
-fn gem_reinstall(package: &'static str, gem_cache: Option<&HashSet<String>>) -> Result<(), Error> {
-    if installed_with_gem(package, gem_cache) {
-        bossy::Command::impure_parse("gem update")
-            .with_arg(package)
-            .run_and_wait()
-            .map_err(|source| Error::InstallFailed { package, source })?;
-    } else {
-        println!(
-            "`sudo` is required to install the {:?} gem dependency",
-            package
-        );
-        bossy::Command::impure_parse("sudo gem install")
-            .with_arg(package)
-            .run_and_wait()
-            .map_err(|source| Error::InstallFailed { package, source })?;
-    }
-    Ok(())
-}
-
-fn update_package(package: &'static str, gem_cache: Option<&HashSet<String>>) -> Result<(), Error> {
+fn update_package(package: &'static str, gem_cache: &mut GemCache) -> Result<(), Error> {
     if installed_with_brew(package) {
         brew_reinstall(package)?;
     } else {
-        gem_reinstall(package, gem_cache)?;
+        gem_cache.reinstall(package)?;
     }
     Ok(())
 }

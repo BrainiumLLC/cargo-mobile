@@ -1,4 +1,4 @@
-use super::{installed_with_gem, PACKAGES};
+use super::{GemCache, PACKAGES};
 use once_cell_regex::{exports::regex::Captures, regex};
 use serde::Deserialize;
 use std::collections::hash_set::HashSet;
@@ -47,7 +47,7 @@ pub struct Outdated {
 }
 
 impl Outdated {
-    pub fn load(gem_cache: Option<&HashSet<String>>) -> Result<Self, OutdatedError> {
+    pub fn load(gem_cache: &mut GemCache) -> Result<Self, OutdatedError> {
         #[derive(Deserialize)]
         struct Raw {
             formulae: Vec<Formula>,
@@ -62,6 +62,7 @@ impl Outdated {
             .run_and_wait_for_string()
             .map_err(OutdatedError::CommandFailed)?;
 
+        gem_cache.initialize();
         let packages = bossy::Command::impure_parse("brew outdated --json=v2")
             .run_and_wait_for_output()
             .map_err(OutdatedError::CommandFailed)
@@ -77,7 +78,7 @@ impl Outdated {
                     .lines()
                     .filter(|name| {
                         !name.is_empty()
-                            && installed_with_gem(name, gem_cache)
+                            && gem_cache.contains_unchecked(name)
                             && gem_outdated.contains(name)
                     })
                     .map(|string| parse_gem_outdated_string(string)),

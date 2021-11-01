@@ -31,7 +31,7 @@ pub fn ensure_present() -> Result<(), Error> {
         if deps::install(
             &deps::PackageSpec::brew("git-lfs"),
             Default::default(),
-            None,
+            &mut deps::GemCache::new(),
         )
         .map_err(Error::from)?
         {
