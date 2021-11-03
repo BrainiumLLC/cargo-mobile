@@ -102,10 +102,7 @@ pub fn gen(
                 "macos-vendor-frameworks",
                 metadata.macos().vendor_frameworks(),
             );
-            map.insert(
-                "macos-vendor-sdks",
-                metadata.macos().vendor_frameworks(),
-            );
+            map.insert("macos-vendor-sdks", metadata.macos().vendor_frameworks());
             map.insert("asset-catalogs", asset_catalogs);
             map.insert(
                 "ios-additional-targets",
