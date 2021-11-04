@@ -81,7 +81,7 @@ impl Outdated {
                             && gem_cache.contains_unchecked(name)
                             && gem_outdated.contains(name)
                     })
-                    .map(|string| parse_gem_outdated_string(string)),
+                    .map(parse_gem_outdated_string),
             )
             .collect::<Result<Vec<Formula>, _>>()?;
 
