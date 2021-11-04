@@ -121,7 +121,7 @@ impl Outdated {
 pub enum RegexError {
     #[error("Failed to match regex in string {revision:?}")]
     SearchFailed { revision: String },
-    #[error("capture group {group:?} failed for string {string:?}")]
+    #[error("Capture group {group:?} missing from string {string:?}")]
     InvalidCaptureGroup { group: String, string: String },
 }
 
