@@ -193,7 +193,7 @@ impl GemCache {
                         .as_str()
                         .to_owned())
                 })
-                .collect::<Result<_, _>>()?;
+                .collect::<Result<HashSet<_>, Error>>()?;
         }
         Ok(())
     }
