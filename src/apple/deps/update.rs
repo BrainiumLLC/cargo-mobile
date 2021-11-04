@@ -71,7 +71,7 @@ impl Outdated {
                 formulae
                     .into_iter()
                     .filter(|formula| package_names.contains(&formula.name.as_str()))
-                    .map(|result| Ok(result))
+                    .map(Ok)
             })?
             .chain(
                 gem_outdated
