@@ -182,7 +182,7 @@ impl GemCache {
                 .run_and_wait_for_string()
                 .map_err(Error::GemListFailed)?;
 
-            let set = gems
+            self.set = gems
                 .lines()
                 .map(|string| regex!(r"(?P<name>.+) \(.+\)").captures(string))
                 .filter_map(|opt| opt)
