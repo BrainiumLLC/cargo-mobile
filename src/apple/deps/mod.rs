@@ -217,7 +217,7 @@ impl GemCache {
                 .map_err(|source| Error::InstallFailed { package, source })?;
         } else {
             println!(
-                "`sudo` is required to install the {:?} gem dependency",
+                "`sudo` is required to install {:?} using gem",
                 package
             );
             bossy::Command::impure_parse("sudo gem install")
