@@ -194,8 +194,6 @@ impl GemCache {
                         .to_owned())
                 })
                 .collect::<Result<HashSet<_>, Error>>()?;
-
-            self.set = set;
         }
         Ok(())
     }
@@ -216,10 +214,7 @@ impl GemCache {
                 .run_and_wait()
                 .map_err(|source| Error::InstallFailed { package, source })?;
         } else {
-            println!(
-                "`sudo` is required to install {:?} using gem",
-                package
-            );
+            println!("`sudo` is required to install {:?} using gem", package);
             bossy::Command::impure_parse("sudo gem install")
                 .with_arg(package)
                 .run_and_wait()
