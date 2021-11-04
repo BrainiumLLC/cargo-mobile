@@ -83,7 +83,7 @@ impl Outdated {
                     })
                     .map(parse_gem_outdated_string),
             )
-            .collect::<Result<Vec<Formula>, _>>()?;
+            .collect::<Result<_, _>>()?;
 
         Ok(Self { packages })
     }
