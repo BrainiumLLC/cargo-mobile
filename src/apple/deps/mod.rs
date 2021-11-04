@@ -35,7 +35,7 @@ impl PackageSpec {
         }
     }
     pub const fn brew_or_gem(pkg_name: &'static str) -> Self {
-        PackageSpec {
+        Self {
             pkg_name,
             bin_name: pkg_name,
             package_source: PackageSource::BrewOrGem,
