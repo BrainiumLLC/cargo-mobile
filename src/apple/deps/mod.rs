@@ -59,6 +59,23 @@ impl PackageSpec {
         log::info!("package `{}` present: {}", self.pkg_name, found);
         Ok(found)
     }
+
+    pub fn install(
+        &self,
+        reinstall_deps: opts::ReinstallDeps,
+        gem_cache: &mut GemCache,
+    ) -> Result<bool, Error> {
+        if !self.found()? || reinstall_deps.yes() {
+            println!("Installing `{}`...", self.pkg_name);
+            match self.package_source {
+                PackageSource::Brew => brew_reinstall(self.pkg_name)?,
+                PackageSource::BrewOrGem => update_package(self.pkg_name, gem_cache)?,
+            }
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
 }
 
 static PACKAGES: &[PackageSpec] = &[
@@ -93,23 +110,6 @@ pub enum Error {
     RegexMatchFailed,
 }
 
-pub fn install(
-    package: &PackageSpec,
-    reinstall_deps: opts::ReinstallDeps,
-    gem_cache: &mut GemCache,
-) -> Result<bool, Error> {
-    if !package.found()? || reinstall_deps.yes() {
-        println!("Installing `{}`...", package.pkg_name);
-        match package.package_source {
-            PackageSource::Brew => brew_reinstall(package.pkg_name)?,
-            PackageSource::BrewOrGem => update_package(package.pkg_name, gem_cache)?,
-        }
-        Ok(true)
-    } else {
-        Ok(false)
-    }
-}
-
 pub fn install_all(
     wrapper: &TextWrapper,
     non_interactive: opts::NonInteractive,
@@ -118,7 +118,7 @@ pub fn install_all(
 ) -> Result<(), Error> {
     let mut gem_cache = GemCache::new();
     for package in PACKAGES {
-        install(package, reinstall_deps, &mut gem_cache)?;
+        package.install(reinstall_deps, &mut gem_cache)?;
     }
     gem_cache.initialize()?;
     let outdated = Outdated::load(&mut gem_cache)?;
