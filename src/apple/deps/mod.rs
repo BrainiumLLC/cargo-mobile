@@ -108,6 +108,8 @@ pub enum Error {
     GemListFailed(#[from] bossy::Error),
     #[error("Regex match failed for output of `gem list`")]
     RegexMatchFailed,
+    #[error(transparent)]
+    CaptureGroupError(#[from] util::CaptureGroupError),
 }
 
 pub fn install_all(
@@ -187,13 +189,12 @@ impl GemCache {
                 .run_and_wait_for_string()
                 .map_err(Error::GemListFailed)?
                 .lines()
-                .flat_map(|string| regex!(r"(?P<name>.+) \(.+\)").captures(string))
-                .map(|caps| {
-                    Ok(caps
-                        .name("name")
-                        .ok_or_else(|| Error::RegexMatchFailed)?
-                        .as_str()
-                        .to_owned())
+                .flat_map(|string| {
+                    let capture = regex!(r"(?P<name>.+) \(.+\)").captures(string);
+                    capture.map(|caps| {
+                        util::get_string_for_group(&caps, "name", string)
+                            .map_err(Error::CaptureGroupError)
+                    })
                 })
                 .collect::<Result<_, Error>>()?;
         }

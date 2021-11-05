@@ -374,6 +374,27 @@ pub fn run_and_search<T>(
         .map_err(RunAndSearchError::from)??)
 }
 
+#[derive(Debug, Error)]
+pub enum CaptureGroupError {
+    #[error("Capture group {group:?} missing from string {string:?}")]
+    InvalidCaptureGroup { group: String, string: String },
+}
+
+pub fn get_string_for_group(
+    caps: &Captures<'_>,
+    group: &str,
+    string: &str,
+) -> Result<String, CaptureGroupError> {
+    Ok(caps
+        .name(group)
+        .ok_or_else(|| CaptureGroupError::InvalidCaptureGroup {
+            group: group.to_string(),
+            string: string.to_string(),
+        })?
+        .as_str()
+        .to_owned())
+}
+
 #[derive(Debug)]
 pub enum OpenInEditorError {
     DetectFailed(os::DetectEditorError),

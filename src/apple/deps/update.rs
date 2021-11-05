@@ -1,5 +1,8 @@
-use super::{GemCache, PACKAGES};
-use once_cell_regex::{exports::regex::Captures, regex};
+use super::{
+    util::{self, CaptureGroupError},
+    GemCache, PACKAGES,
+};
+use once_cell_regex::regex;
 use serde::Deserialize;
 use std::collections::hash_set::HashSet;
 use thiserror::Error;
@@ -120,8 +123,8 @@ impl Outdated {
 pub enum RegexError {
     #[error("Failed to match regex in string {revision:?}")]
     SearchFailed { revision: String },
-    #[error("Capture group {group:?} missing from string {string:?}")]
-    InvalidCaptureGroup { group: String, string: String },
+    #[error(transparent)]
+    InvalidCaptureGroup(#[from] CaptureGroupError),
 }
 
 fn parse_gem_outdated_string(revision: &str) -> Result<Formula, RegexError> {
@@ -131,28 +134,16 @@ fn parse_gem_outdated_string(revision: &str) -> Result<Formula, RegexError> {
             revision: revision.to_owned(),
         })?;
 
-    let name = get_string_for_group(&caps, "name", revision)?;
-    let installed_version = get_string_for_group(&caps, "installed_version", revision)?;
-    let current_version = get_string_for_group(&caps, "current_version", revision)?;
+    let name = util::get_string_for_group(&caps, "name", revision)
+        .map_err(RegexError::InvalidCaptureGroup)?;
+    let installed_version = util::get_string_for_group(&caps, "installed_version", revision)
+        .map_err(RegexError::InvalidCaptureGroup)?;
+    let current_version = util::get_string_for_group(&caps, "current_version", revision)
+        .map_err(RegexError::InvalidCaptureGroup)?;
 
     Ok(Formula {
         name,
         installed_versions: vec![installed_version],
         current_version,
     })
-}
-
-fn get_string_for_group(
-    caps: &Captures<'_>,
-    group: &str,
-    string: &str,
-) -> Result<String, RegexError> {
-    Ok(caps
-        .name(group)
-        .ok_or_else(|| RegexError::InvalidCaptureGroup {
-            group: group.to_string(),
-            string: string.to_string(),
-        })?
-        .as_str()
-        .to_owned())
 }
