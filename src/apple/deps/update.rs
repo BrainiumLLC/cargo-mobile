@@ -62,7 +62,6 @@ impl Outdated {
             .run_and_wait_for_string()
             .map_err(OutdatedError::CommandFailed)?;
 
-        gem_cache.initialize();
         let packages = bossy::Command::impure_parse("brew outdated --json=v2")
             .run_and_wait_for_output()
             .map_err(OutdatedError::CommandFailed)

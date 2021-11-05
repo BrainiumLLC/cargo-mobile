@@ -15,11 +15,13 @@ use once_cell_regex::regex;
 use std::collections::hash_set::HashSet;
 use thiserror::Error;
 
+#[derive(Debug)]
 pub enum PackageSource {
     Brew,
     BrewOrGem,
 }
 
+#[derive(Debug)]
 pub struct PackageSpec {
     pub pkg_name: &'static str,
     pub bin_name: &'static str,
@@ -34,6 +36,7 @@ impl PackageSpec {
             package_source: PackageSource::Brew,
         }
     }
+
     pub const fn brew_or_gem(pkg_name: &'static str) -> Self {
         Self {
             pkg_name,
@@ -41,10 +44,12 @@ impl PackageSpec {
             package_source: PackageSource::BrewOrGem,
         }
     }
+
     pub const fn with_bin_name(mut self, bin_name: &'static str) -> Self {
         self.bin_name = bin_name;
         self
     }
+
     pub fn found(&self) -> Result<bool, Error> {
         let found =
             util::command_present(self.bin_name).map_err(|source| Error::PresenceCheckFailed {
@@ -115,6 +120,7 @@ pub fn install_all(
     for package in PACKAGES {
         install(package, reinstall_deps, &mut gem_cache)?;
     }
+    gem_cache.initialize()?;
     let outdated = Outdated::load(&mut gem_cache)?;
     outdated.print_notice();
     if !outdated.is_empty() && non_interactive.no() {
@@ -165,27 +171,23 @@ fn brew_reinstall(package: &'static str) -> Result<(), Error> {
     Ok(())
 }
 
+#[derive(Default)]
 pub struct GemCache {
     set: HashSet<String>,
 }
 
 impl GemCache {
     pub fn new() -> Self {
-        Self {
-            set: HashSet::new(),
-        }
+        Self::default()
     }
 
     pub fn initialize(&mut self) -> Result<(), Error> {
         if self.set.is_empty() {
-            let gems = bossy::Command::impure_parse("gem list")
+            self.set = bossy::Command::impure_parse("gem list")
                 .run_and_wait_for_string()
-                .map_err(Error::GemListFailed)?;
-
-            self.set = gems
+                .map_err(Error::GemListFailed)?
                 .lines()
-                .map(|string| regex!(r"(?P<name>.+) \(.+\)").captures(string))
-                .filter_map(|opt| opt)
+                .flat_map(|string| regex!(r"(?P<name>.+) \(.+\)").captures(string))
                 .map(|caps| {
                     Ok(caps
                         .name("name")
@@ -200,7 +202,7 @@ impl GemCache {
 
     pub fn contains(&mut self, package: &str) -> Result<bool, Error> {
         self.initialize()?;
-        Ok(self.set.contains(package))
+        Ok(self.contains_unchecked(package))
     }
 
     pub fn contains_unchecked(&self, package: &str) -> bool {
