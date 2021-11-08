@@ -4,8 +4,15 @@ use super::{
 };
 use once_cell_regex::regex;
 use serde::Deserialize;
-use std::collections::hash_set::HashSet;
 use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum RegexError {
+    #[error("Failed to match regex in string {revision:?}")]
+    SearchFailed { revision: String },
+    #[error(transparent)]
+    InvalidCaptureGroup(#[from] CaptureGroupError),
+}
 
 #[derive(Debug, Error)]
 pub enum OutdatedError {
@@ -44,6 +51,27 @@ impl Formula {
     }
 }
 
+fn parse_gem_outdated_string(revision: &str) -> Result<Formula, RegexError> {
+    let caps = regex!(r"(?P<name>.+) \((?P<installed_version>.+) < (?P<latest_version>.+)\)")
+        .captures(revision)
+        .ok_or_else(|| RegexError::SearchFailed {
+            revision: revision.to_owned(),
+        })?;
+
+    let name = util::get_string_for_group(&caps, "name", revision)
+        .map_err(RegexError::InvalidCaptureGroup)?;
+    let installed_version = util::get_string_for_group(&caps, "installed_version", revision)
+        .map_err(RegexError::InvalidCaptureGroup)?;
+    let current_version = util::get_string_for_group(&caps, "current_version", revision)
+        .map_err(RegexError::InvalidCaptureGroup)?;
+
+    Ok(Formula {
+        name,
+        installed_versions: vec![installed_version],
+        current_version,
+    })
+}
+
 #[derive(Debug)]
 pub struct Outdated {
     packages: Vec<Formula>,
@@ -56,11 +84,6 @@ impl Outdated {
             formulae: Vec<Formula>,
         }
 
-        let package_names = PACKAGES
-            .iter()
-            .map(|info| info.pkg_name)
-            .collect::<HashSet<_>>();
-
         let gem_outdated = bossy::Command::impure_parse("gem outdated")
             .run_and_wait_for_string()
             .map_err(OutdatedError::CommandFailed)?;
@@ -72,7 +95,12 @@ impl Outdated {
             .map(|Raw { formulae }| {
                 formulae
                     .into_iter()
-                    .filter(|formula| package_names.contains(&formula.name.as_str()))
+                    .filter(|formula| {
+                        PACKAGES
+                            .iter()
+                            .find(|spec| formula.name == spec.pkg_name)
+                            .is_some()
+                    })
                     .map(Ok)
             })?
             .chain(
@@ -117,33 +145,4 @@ impl Outdated {
             println!("Apple dependencies are up to date");
         }
     }
-}
-
-#[derive(Debug, Error)]
-pub enum RegexError {
-    #[error("Failed to match regex in string {revision:?}")]
-    SearchFailed { revision: String },
-    #[error(transparent)]
-    InvalidCaptureGroup(#[from] CaptureGroupError),
-}
-
-fn parse_gem_outdated_string(revision: &str) -> Result<Formula, RegexError> {
-    let caps = regex!(r"(?P<name>.+) \((?P<installed_version>.+) < (?P<latest_version>.+)\)")
-        .captures(revision)
-        .ok_or_else(|| RegexError::SearchFailed {
-            revision: revision.to_owned(),
-        })?;
-
-    let name = util::get_string_for_group(&caps, "name", revision)
-        .map_err(RegexError::InvalidCaptureGroup)?;
-    let installed_version = util::get_string_for_group(&caps, "installed_version", revision)
-        .map_err(RegexError::InvalidCaptureGroup)?;
-    let current_version = util::get_string_for_group(&caps, "current_version", revision)
-        .map_err(RegexError::InvalidCaptureGroup)?;
-
-    Ok(Formula {
-        name,
-        installed_versions: vec![installed_version],
-        current_version,
-    })
 }
