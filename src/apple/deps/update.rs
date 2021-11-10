@@ -72,23 +72,26 @@ fn parse_gem_outdated_string(revision: &str) -> Result<Formula, RegexError> {
     })
 }
 
+#[derive(Deserialize)]
+struct Raw {
+    formulae: Vec<Formula>,
+}
+
 #[derive(Debug)]
 pub struct Outdated {
     packages: Vec<Formula>,
 }
 
 impl Outdated {
-    pub fn load(gem_cache: &mut GemCache) -> Result<Self, OutdatedError> {
-        #[derive(Deserialize)]
-        struct Raw {
-            formulae: Vec<Formula>,
-        }
-
-        let gem_outdated = bossy::Command::impure_parse("gem outdated")
+    fn outdated_gem_command() -> Result<String, OutdatedError> {
+        bossy::Command::impure_parse("gem outdated")
             .run_and_wait_for_string()
-            .map_err(OutdatedError::CommandFailed)?;
+            .map_err(OutdatedError::CommandFailed)
+    }
 
-        let packages = bossy::Command::impure_parse("brew outdated --json=v2")
+    fn outdated_brew_deps(
+    ) -> Result<impl Iterator<Item = Result<Formula, OutdatedError>>, OutdatedError> {
+        bossy::Command::impure_parse("brew outdated --json=v2")
             .run_and_wait_for_output()
             .map_err(OutdatedError::CommandFailed)
             .and_then(|output| serde_json::from_slice(output.stdout()).map_err(Into::into))
@@ -102,7 +105,13 @@ impl Outdated {
                             .is_some()
                     })
                     .map(Ok)
-            })?
+            })
+    }
+
+    pub fn load(gem_cache: &mut GemCache) -> Result<Self, OutdatedError> {
+        let gem_outdated = Self::outdated_gem_command()?;
+
+        let packages = Self::outdated_brew_deps()?
             .chain(
                 gem_outdated
                     .lines()
@@ -111,10 +120,11 @@ impl Outdated {
                             && gem_cache.contains_unchecked(name)
                             && gem_outdated.contains(name)
                     })
-                    .map(parse_gem_outdated_string),
+                    .map(|string| {
+                        parse_gem_outdated_string(string).map_err(OutdatedError::RegexError)
+                    }),
             )
             .collect::<Result<_, _>>()?;
-
         Ok(Self { packages })
     }
 

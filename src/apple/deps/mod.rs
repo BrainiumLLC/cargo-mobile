@@ -43,6 +43,12 @@ pub enum Error {
     CaptureGroupError(#[from] util::CaptureGroupError),
 }
 
+static PACKAGES: &[PackageSpec] = &[
+    PackageSpec::brew("xcodegen"),
+    PackageSpec::brew("ios-deploy"),
+    PackageSpec::brew_or_gem("cocoapods").with_bin_name("pod"),
+];
+
 #[derive(Default)]
 pub struct GemCache {
     set: HashSet<String>,
@@ -80,20 +86,35 @@ impl GemCache {
     }
 
     pub fn reinstall(&mut self, package: &'static str) -> Result<(), Error> {
-        if self.contains(package)? {
+        let command = if self.contains(package)? {
             bossy::Command::impure_parse("gem update")
-                .with_arg(package)
-                .run_and_wait()
-                .map_err(|source| Error::InstallFailed { package, source })?;
         } else {
             println!("`sudo` is required to install {:?} using gem", package);
             bossy::Command::impure_parse("sudo gem install")
-                .with_arg(package)
-                .run_and_wait()
-                .map_err(|source| Error::InstallFailed { package, source })?;
-        }
+        };
+        command
+            .with_arg(package)
+            .run_and_wait()
+            .map_err(|source| Error::InstallFailed { package, source })?;
         Ok(())
     }
+}
+
+fn installed_with_brew(package: &str) -> bool {
+    bossy::Command::impure_parse("brew list")
+        .with_arg(package)
+        .run_and_wait_for_output()
+        .is_ok()
+}
+
+fn brew_reinstall(package: &'static str) -> Result<(), Error> {
+    // reinstall works even if it's not installed yet, and will upgrade
+    // if it's already installed!
+    bossy::Command::impure_parse("brew reinstall")
+        .with_arg(package)
+        .run_and_wait()
+        .map_err(|source| Error::InstallFailed { package, source })?;
+    Ok(())
 }
 
 fn update_package(package: &'static str, gem_cache: &mut GemCache) -> Result<(), Error> {
@@ -168,12 +189,6 @@ impl PackageSpec {
     }
 }
 
-static PACKAGES: &[PackageSpec] = &[
-    PackageSpec::brew("xcodegen"),
-    PackageSpec::brew("ios-deploy"),
-    PackageSpec::brew_or_gem("cocoapods").with_bin_name("pod"),
-];
-
 pub fn install_all(
     wrapper: &TextWrapper,
     non_interactive: opts::NonInteractive,
@@ -215,22 +230,5 @@ pub fn install_all(
             .print(wrapper);
         }
     }
-    Ok(())
-}
-
-fn installed_with_brew(package: &str) -> bool {
-    bossy::Command::impure_parse("brew list")
-        .with_arg(package)
-        .run_and_wait_for_output()
-        .is_ok()
-}
-
-fn brew_reinstall(package: &'static str) -> Result<(), Error> {
-    // reinstall works even if it's not installed yet, and will upgrade
-    // if it's already installed!
-    bossy::Command::impure_parse("brew reinstall")
-        .with_arg(package)
-        .run_and_wait()
-        .map_err(|source| Error::InstallFailed { package, source })?;
     Ok(())
 }
