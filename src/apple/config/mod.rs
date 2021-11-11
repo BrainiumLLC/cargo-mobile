@@ -194,12 +194,12 @@ impl Config {
                 );
                 Ok(DEFAULT_PROJECT_DIR.to_owned())
             })?;
-
+        let use_legacy_build_system = raw.use_legacy_build_system.unwrap_or(true);
         Ok(Self {
             app,
             development_team: raw.development_team,
             project_dir,
-            use_legacy_build_system: raw.use_legacy_build_system,
+            use_legacy_build_system,
         })
     }
 
