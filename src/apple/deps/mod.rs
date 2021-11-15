@@ -86,16 +86,15 @@ impl GemCache {
     }
 
     pub fn reinstall(&mut self, package: &'static str) -> Result<(), Error> {
-        let command = if self.contains(package)? {
-            bossy::Command::impure_parse("gem update")
+        bossy::Command::impure_parse(if self.contains(package)? {
+            "gem update"
         } else {
             println!("`sudo` is required to install {:?} using gem", package);
-            bossy::Command::impure_parse("sudo gem install")
-        };
-        command
-            .with_arg(package)
-            .run_and_wait()
-            .map_err(|source| Error::InstallFailed { package, source })?;
+            "sudo gem install"
+        })
+        .with_arg(package)
+        .run_and_wait()
+        .map_err(|source| Error::InstallFailed { package, source })?;
         Ok(())
     }
 }

@@ -49,32 +49,27 @@ impl Formula {
             );
         }
     }
-}
 
-fn parse_gem_outdated_string(revision: &str) -> Result<Formula, RegexError> {
-    let caps = regex!(r"(?P<name>.+) \((?P<installed_version>.+) < (?P<latest_version>.+)\)")
-        .captures(revision)
-        .ok_or_else(|| RegexError::SearchFailed {
-            revision: revision.to_owned(),
-        })?;
+    fn from_gem_outdated_str(revision: &str) -> Result<Self, RegexError> {
+        let caps = regex!(r"(?P<name>.+) \((?P<installed_version>.+) < (?P<latest_version>.+)\)")
+            .captures(revision)
+            .ok_or_else(|| RegexError::SearchFailed {
+                revision: revision.to_owned(),
+            })?;
 
-    let name = util::get_string_for_group(&caps, "name", revision)
-        .map_err(RegexError::InvalidCaptureGroup)?;
-    let installed_version = util::get_string_for_group(&caps, "installed_version", revision)
-        .map_err(RegexError::InvalidCaptureGroup)?;
-    let current_version = util::get_string_for_group(&caps, "current_version", revision)
-        .map_err(RegexError::InvalidCaptureGroup)?;
+        let name = util::get_string_for_group(&caps, "name", revision)
+            .map_err(RegexError::InvalidCaptureGroup)?;
+        let installed_version = util::get_string_for_group(&caps, "installed_version", revision)
+            .map_err(RegexError::InvalidCaptureGroup)?;
+        let current_version = util::get_string_for_group(&caps, "current_version", revision)
+            .map_err(RegexError::InvalidCaptureGroup)?;
 
-    Ok(Formula {
-        name,
-        installed_versions: vec![installed_version],
-        current_version,
-    })
-}
-
-#[derive(Deserialize)]
-struct Raw {
-    formulae: Vec<Formula>,
+        Ok(Self {
+            name,
+            installed_versions: vec![installed_version],
+            current_version,
+        })
+    }
 }
 
 #[derive(Debug)]
@@ -91,6 +86,11 @@ impl Outdated {
 
     fn outdated_brew_deps(
     ) -> Result<impl Iterator<Item = Result<Formula, OutdatedError>>, OutdatedError> {
+        #[derive(Deserialize)]
+        struct Raw {
+            formulae: Vec<Formula>,
+        }
+
         bossy::Command::impure_parse("brew outdated --json=v2")
             .run_and_wait_for_output()
             .map_err(OutdatedError::CommandFailed)
@@ -121,7 +121,7 @@ impl Outdated {
                             && gem_outdated.contains(name)
                     })
                     .map(|string| {
-                        parse_gem_outdated_string(string).map_err(OutdatedError::RegexError)
+                        Formula::from_gem_outdated_str(string).map_err(OutdatedError::RegexError)
                     }),
             )
             .collect::<Result<_, _>>()?;
