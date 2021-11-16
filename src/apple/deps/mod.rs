@@ -15,6 +15,12 @@ use once_cell_regex::regex;
 use std::collections::hash_set::HashSet;
 use thiserror::Error;
 
+static PACKAGES: &[PackageSpec] = &[
+    PackageSpec::brew("xcodegen"),
+    PackageSpec::brew("ios-deploy"),
+    PackageSpec::brew_or_gem("cocoapods").with_bin_name("pod"),
+];
+
 #[derive(Debug, Error)]
 pub enum Error {
     #[error(transparent)]
@@ -42,12 +48,6 @@ pub enum Error {
     #[error(transparent)]
     CaptureGroupError(#[from] util::CaptureGroupError),
 }
-
-static PACKAGES: &[PackageSpec] = &[
-    PackageSpec::brew("xcodegen"),
-    PackageSpec::brew("ios-deploy"),
-    PackageSpec::brew_or_gem("cocoapods").with_bin_name("pod"),
-];
 
 #[derive(Default)]
 pub struct GemCache {
@@ -86,15 +86,16 @@ impl GemCache {
     }
 
     pub fn reinstall(&mut self, package: &'static str) -> Result<(), Error> {
-        bossy::Command::impure_parse(if self.contains(package)? {
+        let command_string = if self.contains(package)? {
             "gem update"
         } else {
             println!("`sudo` is required to install {:?} using gem", package);
             "sudo gem install"
-        })
-        .with_arg(package)
-        .run_and_wait()
-        .map_err(|source| Error::InstallFailed { package, source })?;
+        };
+        bossy::Command::impure_parse(command_string)
+            .with_arg(package)
+            .run_and_wait()
+            .map_err(|source| Error::InstallFailed { package, source })?;
         Ok(())
     }
 }
