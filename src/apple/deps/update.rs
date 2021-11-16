@@ -78,10 +78,16 @@ pub struct Outdated {
 }
 
 impl Outdated {
-    fn outdated_gem_command() -> Result<String, OutdatedError> {
-        bossy::Command::impure_parse("gem outdated")
-            .run_and_wait_for_string()
-            .map_err(OutdatedError::CommandFailed)
+    fn outdated_gem_deps<'a>(
+        outdated_strings: &'a str,
+        gem_cache: &'a GemCache,
+    ) -> Result<impl Iterator<Item = Result<Formula, OutdatedError>> + 'a, OutdatedError> {
+        Ok(outdated_strings
+            .lines()
+            .filter(move |name| !name.is_empty() && gem_cache.contains_unchecked(name))
+            .map(|string| {
+                Formula::from_gem_outdated_str(string).map_err(OutdatedError::RegexError)
+            }))
     }
 
     fn outdated_brew_deps(
@@ -109,21 +115,11 @@ impl Outdated {
     }
 
     pub fn load(gem_cache: &mut GemCache) -> Result<Self, OutdatedError> {
-        let gem_outdated = Self::outdated_gem_command()?;
-
+        let outdated_strings = bossy::Command::impure_parse("gem outdated")
+            .run_and_wait_for_string()
+            .map_err(OutdatedError::CommandFailed)?;
         let packages = Self::outdated_brew_deps()?
-            .chain(
-                gem_outdated
-                    .lines()
-                    .filter(|name| {
-                        !name.is_empty()
-                            && gem_cache.contains_unchecked(name)
-                            && gem_outdated.contains(name)
-                    })
-                    .map(|string| {
-                        Formula::from_gem_outdated_str(string).map_err(OutdatedError::RegexError)
-                    }),
-            )
+            .chain(Self::outdated_gem_deps(&outdated_strings, gem_cache)?)
             .collect::<Result<_, _>>()?;
         Ok(Self { packages })
     }
