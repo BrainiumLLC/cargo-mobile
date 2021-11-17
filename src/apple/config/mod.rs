@@ -152,6 +152,10 @@ pub struct Config {
     app: App,
     development_team: String,
     project_dir: String,
+    ios_min_version_major: u32,
+    ios_min_version_minor: u32,
+    osx_min_version_major: u32,
+    osx_min_version_minor: u32,
 }
 
 impl Config {
@@ -193,6 +197,10 @@ impl Config {
             app,
             development_team: raw.development_team,
             project_dir,
+            ios_min_version_major: raw.ios_min_version_major.unwrap_or(9),
+            ios_min_version_minor: raw.ios_min_version_minor.unwrap_or(0),
+            osx_min_version_major: raw.osx_min_version_major.unwrap_or(9),
+            osx_min_version_minor: raw.osx_min_version_minor.unwrap_or(0),
         })
     }
 
