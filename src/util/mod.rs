@@ -10,7 +10,7 @@ pub use self::{cargo::*, git::*, path::*};
 use self::cli::{Report, Reportable};
 use crate::os::{self, command_path};
 use once_cell_regex::{exports::regex::Captures, exports::regex::Regex, regex};
-use serde::{de, de::Visitor, ser::Serializer, Deserialize, Deserializer, Serialize};
+use serde::{ser::Serializer, Serialize};
 use std::{
     fmt::{self, Debug, Display},
     io::{self, Write},
@@ -190,10 +190,12 @@ impl Serialize for VersionDouble {
     }
 }
 
-impl std::str::FromStr for VersionDouble {
-    type Err = VersionDoubleError;
+impl VersionDouble {
+    pub const fn new(major: u32, minor: u32) -> Self {
+        Self { major, minor }
+    }
 
-    fn from_str(v: &str) -> Result<Self, Self::Err> {
+    pub fn from_str(v: &str) -> Result<Self, VersionDoubleError> {
         if !v.contains(".") {
             return Ok(VersionDouble {
                 major: v
@@ -227,56 +229,6 @@ impl std::str::FromStr for VersionDouble {
                 version: v.to_owned(),
             })
         }
-    }
-}
-
-impl VersionDouble {
-    pub const fn new(major: u32, minor: u32) -> Self {
-        Self { major, minor }
-    }
-
-    pub fn from_caps<'a>(caps: &'a Captures<'a>) -> Result<(Self, &'a str), VersionTripleError> {
-        let version_str = &caps["version"];
-        Ok((
-            Self {
-                major: parse!("major", VersionTripleError, MajorInvalid, version)(
-                    &caps,
-                    version_str,
-                )?,
-                minor: parse!("minor", VersionTripleError, MinorInvalid, version)(
-                    &caps,
-                    version_str,
-                )?,
-            },
-            version_str,
-        ))
-    }
-}
-
-struct SerdeVisitor;
-
-impl<'de> Visitor<'de> for SerdeVisitor {
-    type Value = VersionDouble;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a value in the format <version major>.<version minor>")
-    }
-
-    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        v.parse()
-            .map_err(|_| de::Error::invalid_type(de::Unexpected::Str(v), &self))
-    }
-}
-
-impl<'de> Deserialize<'de> for VersionDouble {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_any(SerdeVisitor)
     }
 }
 

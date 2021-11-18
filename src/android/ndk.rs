@@ -3,7 +3,6 @@ use super::{
     target::Target,
 };
 use crate::util::{
-    self,
     cli::{Report, Reportable},
     VersionDouble,
 };

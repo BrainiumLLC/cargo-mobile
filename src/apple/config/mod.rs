@@ -4,7 +4,7 @@ pub use self::raw::*;
 
 use crate::{
     config::app::App,
-    util::{self, cli::Report, VersionDouble},
+    util::{self, cli::Report, VersionDouble, VersionDoubleError},
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -13,7 +13,7 @@ use std::{
 };
 
 static DEFAULT_PROJECT_DIR: &str = "gen/apple";
-const DEFAULT_VERSION: VersionDouble = VersionDouble::new(9, 0);
+const DEFAULT_VERSION: &str = "9.0";
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -126,6 +126,8 @@ pub enum Error {
     DevelopmentTeamMissing,
     DevelopmentTeamEmpty,
     ProjectDirInvalid(ProjectDirInvalid),
+    IosVersionDoubleInvalid(VersionDoubleError),
+    MacOsVersionDoubleInvalid(VersionDoubleError),
 }
 
 impl Error {
@@ -142,6 +144,12 @@ impl Error {
                 msg,
                 format!("`{}.project-dir` invalid: {}", super::NAME, err),
             ),
+            Self::IosVersionDoubleInvalid(err) => {
+                Report::error(msg, format!("iOS version double is not valid: {}", err))
+            }
+            Self::MacOsVersionDoubleInvalid(err) => {
+                Report::error(msg, format!("MacOS version double is not valid: {}", err))
+            }
         }
     }
 }
@@ -196,8 +204,16 @@ impl Config {
             app,
             development_team: raw.development_team,
             project_dir,
-            ios_version: raw.ios_version.unwrap_or(DEFAULT_VERSION),
-            macos_version: raw.macos_version.unwrap_or(DEFAULT_VERSION),
+            ios_version: VersionDouble::from_str(
+                &raw.ios_version
+                    .unwrap_or_else(|| DEFAULT_VERSION.to_owned()),
+            )
+            .map_err(Error::IosVersionDoubleInvalid)?,
+            macos_version: VersionDouble::from_str(
+                &raw.macos_version
+                    .unwrap_or_else(|| DEFAULT_VERSION.to_owned()),
+            )
+            .map_err(Error::MacOsVersionDoubleInvalid)?,
         })
     }
 
