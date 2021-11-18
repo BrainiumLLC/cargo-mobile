@@ -175,12 +175,6 @@ pub struct VersionDouble {
     pub minor: u32,
 }
 
-impl Default for VersionDouble {
-    fn default() -> Self {
-        Self { major: 9, minor: 0 }
-    }
-}
-
 impl Display for VersionDouble {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}.{}", self.major, self.minor)

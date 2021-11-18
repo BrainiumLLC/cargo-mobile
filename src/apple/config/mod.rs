@@ -13,6 +13,7 @@ use std::{
 };
 
 static DEFAULT_PROJECT_DIR: &str = "gen/apple";
+const DEFAULT_VERSION: VersionDouble = VersionDouble::new(9, 0);
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -195,8 +196,8 @@ impl Config {
             app,
             development_team: raw.development_team,
             project_dir,
-            ios_version: raw.ios_version.unwrap_or(VersionDouble::default()),
-            macos_version: raw.macos_version.unwrap_or(VersionDouble::default()),
+            ios_version: raw.ios_version.unwrap_or(DEFAULT_VERSION),
+            macos_version: raw.macos_version.unwrap_or(DEFAULT_VERSION),
         })
     }
 
