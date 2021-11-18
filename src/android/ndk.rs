@@ -124,10 +124,10 @@ impl Display for NdkVersion {
 
 impl From<source_props::Revision> for NdkVersion {
     fn from(revision: source_props::Revision) -> Self {
-        Self(VersionDouble {
-            major: revision.triple.major,
-            minor: revision.triple.minor,
-        })
+        Self(VersionDouble::new(
+            revision.triple.major,
+            revision.triple.minor,
+        ))
     }
 }
 
