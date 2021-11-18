@@ -150,6 +150,24 @@ impl VersionTriple {
     }
 }
 
+#[derive(Debug, Error)]
+pub enum VersionDoubleError {
+    #[error("Failed to parse major version from {version:?}: {source}")]
+    MajorInvalid {
+        version: String,
+        source: std::num::ParseIntError,
+    },
+    #[error("Failed to parse minor version from {version:?}: {source}")]
+    MinorInvalid {
+        version: String,
+        source: std::num::ParseIntError,
+    },
+    #[error(
+        "Failed to parse version string {version:?}: string must be in format <major>[.minor]"
+    )]
+    VersionStringInvalid { version: String },
+}
+
 // Generic version triple
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct VersionDouble {
@@ -179,14 +197,17 @@ impl Serialize for VersionDouble {
 }
 
 impl std::str::FromStr for VersionDouble {
-    type Err = ();
+    type Err = VersionDoubleError;
 
     fn from_str(v: &str) -> Result<Self, Self::Err> {
         if !v.contains(".") {
             return Ok(VersionDouble {
                 major: v
                     .parse()
-                    .unwrap_or_else(|err| panic!("failed to parse `{}` as a version: {}", v, err)),
+                    .map_err(|source| VersionDoubleError::MajorInvalid {
+                        version: v.to_owned(),
+                        source,
+                    })?,
                 minor: 0,
             });
         }
@@ -194,11 +215,23 @@ impl std::str::FromStr for VersionDouble {
         if v.split(".").count() == 2 {
             let mut s = v.split(".");
             Ok(VersionDouble {
-                major: s.next().unwrap().parse().unwrap(),
-                minor: s.next().unwrap().parse().unwrap(),
+                major: s.next().unwrap().parse().map_err(|source| {
+                    VersionDoubleError::MajorInvalid {
+                        version: v.to_owned(),
+                        source,
+                    }
+                })?,
+                minor: s.next().unwrap().parse().map_err(|source| {
+                    VersionDoubleError::MinorInvalid {
+                        version: v.to_owned(),
+                        source,
+                    }
+                })?,
             })
         } else {
-            panic!("Source string {:?} must be in format <major>.<minor>", v);
+            Err(VersionDoubleError::VersionStringInvalid {
+                version: v.to_owned(),
+            })
         }
     }
 }
