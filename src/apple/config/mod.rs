@@ -195,12 +195,8 @@ impl Config {
             app,
             development_team: raw.development_team,
             project_dir,
-            ios_version_double: raw
-                .ios_version_double
-                .unwrap_or(VersionDouble { major: 9, minor: 0 }),
-                macos_version_double: raw
-                .macos_version_double
-                .unwrap_or(VersionDouble { major: 9, minor: 0 }),
+            ios_version_double: raw.ios_version_double.unwrap_or(VersionDouble::default()),
+            macos_version_double: raw.macos_version_double.unwrap_or(VersionDouble::default()),
         })
     }
 
