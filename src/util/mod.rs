@@ -168,7 +168,7 @@ pub enum VersionDoubleError {
     VersionStringInvalid { version: String },
 }
 
-// Generic version triple
+// Generic version double
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct VersionDouble {
     pub major: u32,
