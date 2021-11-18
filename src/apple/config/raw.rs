@@ -1,6 +1,6 @@
 use crate::{
     apple::teams,
-    util::{cli::TextWrapper, prompt},
+    util::{self, cli::TextWrapper, prompt},
 };
 use colored::{Color, Colorize as _};
 use serde::{Deserialize, Serialize};
@@ -51,10 +51,8 @@ pub struct Raw {
     pub ios_features: Option<Vec<String>>,
     pub macos_no_default_features: Option<bool>,
     pub macos_features: Option<Vec<String>>,
-    pub ios_min_version_major: Option<u32>,
-    pub ios_min_version_minor: Option<u32>,
-    pub osx_min_version_major: Option<u32>,
-    pub osx_min_version_minor: Option<u32>,
+    pub ios_version_double: Option<util::VersionDouble>,
+    pub macos_version_double: Option<util::VersionDouble>,
 }
 
 impl Raw {
@@ -71,10 +69,8 @@ impl Raw {
             ios_features: None,
             macos_no_default_features: None,
             macos_features: None,
-            ios_min_version_major: None,
-            ios_min_version_minor: None,
-            osx_min_version_major: None,
-            osx_min_version_minor: None,
+            ios_version_double: None,
+            macos_version_double: None,
         })
     }
 
@@ -150,10 +146,8 @@ impl Raw {
             ios_features: None,
             macos_no_default_features: None,
             macos_features: None,
-            ios_min_version_major: None,
-            ios_min_version_minor: None,
-            osx_min_version_major: None,
-            osx_min_version_minor: None,
+            ios_version_double: None,
+            macos_version_double: None,
         })
     }
 }

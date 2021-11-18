@@ -10,6 +10,7 @@ pub use self::{cargo::*, git::*, path::*};
 use self::cli::{Report, Reportable};
 use crate::os::{self, command_path};
 use once_cell_regex::{exports::regex::Captures, exports::regex::Regex, regex};
+use serde::{de, de::Visitor, ser::Serializer, Deserialize, Deserializer, Serialize};
 use std::{
     fmt::{self, Debug, Display},
     io::{self, Write},
@@ -146,6 +147,109 @@ impl VersionTriple {
             },
             version_str,
         ))
+    }
+}
+
+// Generic version triple
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub struct VersionDouble {
+    pub major: u32,
+    pub minor: u32,
+}
+
+impl Default for VersionDouble {
+    fn default() -> Self {
+        Self { major: 9, minor: 0 }
+    }
+}
+
+impl Display for VersionDouble {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}.{}", self.major, self.minor)
+    }
+}
+
+impl Serialize for VersionDouble {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.collect_str(self)
+    }
+}
+
+impl std::str::FromStr for VersionDouble {
+    type Err = ();
+
+    fn from_str(v: &str) -> Result<Self, Self::Err> {
+        if !v.contains(".") {
+            return Ok(VersionDouble {
+                major: v
+                    .parse()
+                    .unwrap_or_else(|err| panic!("failed to parse `{}` as a version: {}", v, err)),
+                minor: 0,
+            });
+        }
+
+        if v.split(".").count() == 2 {
+            let mut s = v.split(".");
+            Ok(VersionDouble {
+                major: s.next().unwrap().parse().unwrap(),
+                minor: s.next().unwrap().parse().unwrap(),
+            })
+        } else {
+            panic!("Source string {:?} must be in format <major>.<minor>", v);
+        }
+    }
+}
+
+impl VersionDouble {
+    pub const fn new(major: u32, minor: u32) -> Self {
+        Self { major, minor }
+    }
+
+    pub fn from_caps<'a>(caps: &'a Captures<'a>) -> Result<(Self, &'a str), VersionTripleError> {
+        let version_str = &caps["version"];
+        Ok((
+            Self {
+                major: parse!("major", VersionTripleError, MajorInvalid, version)(
+                    &caps,
+                    version_str,
+                )?,
+                minor: parse!("minor", VersionTripleError, MinorInvalid, version)(
+                    &caps,
+                    version_str,
+                )?,
+            },
+            version_str,
+        ))
+    }
+}
+
+struct SerdeVisitor;
+
+impl<'de> Visitor<'de> for SerdeVisitor {
+    type Value = VersionDouble;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a value in the format <version major>.<version minor>")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        v.parse()
+            .map_err(|_| de::Error::invalid_type(de::Unexpected::Str(v), &self))
+    }
+}
+
+impl<'de> Deserialize<'de> for VersionDouble {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_any(SerdeVisitor)
     }
 }
 

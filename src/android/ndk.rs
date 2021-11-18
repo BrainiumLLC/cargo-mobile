@@ -2,7 +2,11 @@ use super::{
     source_props::{self, SourceProps},
     target::Target,
 };
-use crate::util::cli::{Report, Reportable};
+use crate::util::{
+    self,
+    cli::{Report, Reportable},
+    VersionDouble,
+};
 use once_cell_regex::regex_multi_line;
 use std::{
     collections::HashSet,
@@ -11,10 +15,10 @@ use std::{
 };
 use thiserror::Error;
 
-const MIN_NDK_VERSION: ShortVersion = ShortVersion {
+const MIN_NDK_VERSION: ShortVersion = ShortVersion(VersionDouble {
     major: 19,
     minor: 0,
-};
+});
 
 #[cfg(target_os = "macos")]
 pub fn host_tag() -> &'static str {
@@ -99,21 +103,18 @@ impl MissingToolError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub struct ShortVersion {
-    major: u32,
-    minor: u32,
-}
+pub struct ShortVersion(util::VersionDouble);
 
 impl Display for ShortVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "r{}", self.major)?;
-        if self.minor != 0 {
+        write!(f, "r{}", self.0.major)?;
+        if self.0.minor != 0 {
             write!(
                 f,
                 "{}",
                 (b'a'..=b'z')
                     .map(char::from)
-                    .nth(self.minor as _)
+                    .nth(self.0.minor as _)
                     .expect("NDK minor version exceeded the number of letters in the alphabet")
             )?;
         }
@@ -123,10 +124,10 @@ impl Display for ShortVersion {
 
 impl From<source_props::Revision> for ShortVersion {
     fn from(revision: source_props::Revision) -> Self {
-        Self {
+        Self(util::VersionDouble {
             major: revision.triple.major,
             minor: revision.triple.minor,
-        }
+        })
     }
 }
 
