@@ -15,7 +15,7 @@ use std::{
 };
 use thiserror::Error;
 
-const MIN_NDK_VERSION: ShortVersion = ShortVersion(VersionDouble {
+const MIN_NDK_VERSION: NdkVersion = NdkVersion(VersionDouble {
     major: 19,
     minor: 0,
 });
@@ -103,9 +103,9 @@ impl MissingToolError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub struct ShortVersion(VersionDouble);
+pub struct NdkVersion(VersionDouble);
 
-impl Display for ShortVersion {
+impl Display for NdkVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "r{}", self.0.major)?;
         if self.0.minor != 0 {
@@ -122,7 +122,7 @@ impl Display for ShortVersion {
     }
 }
 
-impl From<source_props::Revision> for ShortVersion {
+impl From<source_props::Revision> for NdkVersion {
     fn from(revision: source_props::Revision) -> Self {
         Self(VersionDouble {
             major: revision.triple.major,
@@ -142,8 +142,8 @@ pub enum Error {
     VersionLookupFailed(#[from] source_props::Error),
     #[error("At least NDK {you_need} is required (you currently have NDK {you_have})")]
     VersionTooLow {
-        you_have: ShortVersion,
-        you_need: ShortVersion,
+        you_have: NdkVersion,
+        you_need: NdkVersion,
     },
 }
 
@@ -189,7 +189,7 @@ impl Env {
         let env = Self { ndk_home };
         let version = env
             .version()
-            .map(ShortVersion::from)
+            .map(NdkVersion::from)
             .map_err(Error::VersionLookupFailed)?;
         if version >= MIN_NDK_VERSION {
             Ok(env)
