@@ -51,8 +51,8 @@ pub struct Raw {
     pub ios_features: Option<Vec<String>>,
     pub macos_no_default_features: Option<bool>,
     pub macos_features: Option<Vec<String>>,
-    pub ios_version_double: Option<VersionDouble>,
-    pub macos_version_double: Option<VersionDouble>,
+    pub ios_version: Option<VersionDouble>,
+    pub macos_version: Option<VersionDouble>,
 }
 
 impl Raw {
@@ -69,8 +69,8 @@ impl Raw {
             ios_features: None,
             macos_no_default_features: None,
             macos_features: None,
-            ios_version_double: None,
-            macos_version_double: None,
+            ios_version: None,
+            macos_version: None,
         })
     }
 
@@ -146,8 +146,8 @@ impl Raw {
             ios_features: None,
             macos_no_default_features: None,
             macos_features: None,
-            ios_version_double: None,
-            macos_version_double: None,
+            ios_version: None,
+            macos_version: None,
         })
     }
 }

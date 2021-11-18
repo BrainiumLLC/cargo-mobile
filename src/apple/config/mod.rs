@@ -152,8 +152,8 @@ pub struct Config {
     app: App,
     development_team: String,
     project_dir: String,
-    ios_version_double: VersionDouble,
-    macos_version_double: VersionDouble,
+    ios_version: VersionDouble,
+    macos_version: VersionDouble,
 }
 
 impl Config {
@@ -195,8 +195,8 @@ impl Config {
             app,
             development_team: raw.development_team,
             project_dir,
-            ios_version_double: raw.ios_version_double.unwrap_or(VersionDouble::default()),
-            macos_version_double: raw.macos_version_double.unwrap_or(VersionDouble::default()),
+            ios_version: raw.ios_version.unwrap_or(VersionDouble::default()),
+            macos_version: raw.macos_version.unwrap_or(VersionDouble::default()),
         })
     }
 
