@@ -103,7 +103,7 @@ impl MissingToolError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub struct ShortVersion(util::VersionDouble);
+pub struct ShortVersion(VersionDouble);
 
 impl Display for ShortVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -124,7 +124,7 @@ impl Display for ShortVersion {
 
 impl From<source_props::Revision> for ShortVersion {
     fn from(revision: source_props::Revision) -> Self {
-        Self(util::VersionDouble {
+        Self(VersionDouble {
             major: revision.triple.major,
             minor: revision.triple.minor,
         })

@@ -1,6 +1,6 @@
 use crate::{
     apple::teams,
-    util::{self, cli::TextWrapper, prompt},
+    util::{cli::TextWrapper, prompt, VersionDouble},
 };
 use colored::{Color, Colorize as _};
 use serde::{Deserialize, Serialize};
@@ -51,8 +51,8 @@ pub struct Raw {
     pub ios_features: Option<Vec<String>>,
     pub macos_no_default_features: Option<bool>,
     pub macos_features: Option<Vec<String>>,
-    pub ios_version_double: Option<util::VersionDouble>,
-    pub macos_version_double: Option<util::VersionDouble>,
+    pub ios_version_double: Option<VersionDouble>,
+    pub macos_version_double: Option<VersionDouble>,
 }
 
 impl Raw {
