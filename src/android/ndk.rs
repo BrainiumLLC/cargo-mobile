@@ -14,10 +14,7 @@ use std::{
 };
 use thiserror::Error;
 
-const MIN_NDK_VERSION: NdkVersion = NdkVersion(VersionDouble {
-    major: 19,
-    minor: 0,
-});
+const MIN_NDK_VERSION: NdkVersion = NdkVersion(VersionDouble::new(19, 0));
 
 #[cfg(target_os = "macos")]
 pub fn host_tag() -> &'static str {
