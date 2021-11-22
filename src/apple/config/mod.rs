@@ -13,7 +13,8 @@ use std::{
 };
 
 static DEFAULT_PROJECT_DIR: &str = "gen/apple";
-const DEFAULT_VERSION: &str = "9.0";
+const DEFAULT_IOS_VERSION: VersionDouble = VersionDouble::new(9, 0);
+const DEFAULT_MACOS_VERSION: VersionDouble = VersionDouble::new(11, 0);
 
 #[derive(Debug, Default, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -126,8 +127,8 @@ pub enum Error {
     DevelopmentTeamMissing,
     DevelopmentTeamEmpty,
     ProjectDirInvalid(ProjectDirInvalid),
-    IosVersionDoubleInvalid(VersionDoubleError),
-    MacOsVersionDoubleInvalid(VersionDoubleError),
+    IosVersionInvalid(VersionDoubleError),
+    MacOsVersionInvalid(VersionDoubleError),
 }
 
 impl Error {
@@ -144,12 +145,14 @@ impl Error {
                 msg,
                 format!("`{}.project-dir` invalid: {}", super::NAME, err),
             ),
-            Self::IosVersionDoubleInvalid(err) => {
-                Report::error(msg, format!("iOS version double is not valid: {}", err))
-            }
-            Self::MacOsVersionDoubleInvalid(err) => {
-                Report::error(msg, format!("MacOS version double is not valid: {}", err))
-            }
+            Self::IosVersionInvalid(err) => Report::error(
+                msg,
+                format!("`{}.ios-version` invalid: {}", super::NAME, err),
+            ),
+            Self::MacOsVersionInvalid(err) => Report::error(
+                msg,
+                format!("`{}.macos-version` invalid: {}", super::NAME, err),
+            ),
         }
     }
 }
@@ -204,16 +207,18 @@ impl Config {
             app,
             development_team: raw.development_team,
             project_dir,
-            ios_version: VersionDouble::from_str(
-                &raw.ios_version
-                    .unwrap_or_else(|| DEFAULT_VERSION.to_owned()),
-            )
-            .map_err(Error::IosVersionDoubleInvalid)?,
-            macos_version: VersionDouble::from_str(
-                &raw.macos_version
-                    .unwrap_or_else(|| DEFAULT_VERSION.to_owned()),
-            )
-            .map_err(Error::MacOsVersionDoubleInvalid)?,
+            ios_version: if raw.ios_version.is_some() {
+                VersionDouble::from_str(&raw.ios_version.unwrap())
+                    .map_err(Error::IosVersionInvalid)?
+            } else {
+                DEFAULT_IOS_VERSION
+            },
+            macos_version: if raw.macos_version.is_some() {
+                VersionDouble::from_str(&raw.macos_version.unwrap())
+                    .map_err(Error::IosVersionInvalid)?
+            } else {
+                DEFAULT_MACOS_VERSION
+            },
         })
     }
 
