@@ -196,8 +196,8 @@ impl VersionDouble {
     }
 
     pub fn from_str(v: &str) -> Result<Self, VersionDoubleError> {
-        if !v.contains(".") {
-            return Ok(VersionDouble {
+        match v.split(".").count() {
+            0 => Ok(VersionDouble {
                 major: v
                     .parse()
                     .map_err(|source| VersionDoubleError::MajorInvalid {
@@ -205,29 +205,27 @@ impl VersionDouble {
                         source,
                     })?,
                 minor: 0,
-            });
-        }
-
-        if v.split(".").count() == 2 {
-            let mut s = v.split(".");
-            Ok(VersionDouble {
-                major: s.next().unwrap().parse().map_err(|source| {
-                    VersionDoubleError::MajorInvalid {
-                        version: v.to_owned(),
-                        source,
-                    }
-                })?,
-                minor: s.next().unwrap().parse().map_err(|source| {
-                    VersionDoubleError::MinorInvalid {
-                        version: v.to_owned(),
-                        source,
-                    }
-                })?,
-            })
-        } else {
-            Err(VersionDoubleError::VersionStringInvalid {
+            }),
+            1 => {
+                let mut s = v.split(".");
+                Ok(VersionDouble {
+                    major: s.next().unwrap().parse().map_err(|source| {
+                        VersionDoubleError::MajorInvalid {
+                            version: v.to_owned(),
+                            source,
+                        }
+                    })?,
+                    minor: s.next().unwrap().parse().map_err(|source| {
+                        VersionDoubleError::MinorInvalid {
+                            version: v.to_owned(),
+                            source,
+                        }
+                    })?,
+                })
+            }
+            _ => Err(VersionDoubleError::VersionStringInvalid {
                 version: v.to_owned(),
-            })
+            }),
         }
     }
 }
