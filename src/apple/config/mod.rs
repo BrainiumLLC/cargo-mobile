@@ -207,18 +207,18 @@ impl Config {
             app,
             development_team: raw.development_team,
             project_dir,
-            ios_version: if raw.ios_version.is_some() {
-                VersionDouble::from_str(&raw.ios_version.unwrap())
-                    .map_err(Error::IosVersionInvalid)?
-            } else {
-                DEFAULT_IOS_VERSION
-            },
-            macos_version: if raw.macos_version.is_some() {
-                VersionDouble::from_str(&raw.macos_version.unwrap())
-                    .map_err(Error::IosVersionInvalid)?
-            } else {
-                DEFAULT_MACOS_VERSION
-            },
+            ios_version: raw
+                .ios_version
+                .map(|str| VersionDouble::from_str(&str))
+                .transpose()
+                .map_err(Error::IosVersionInvalid)?
+                .unwrap_or(DEFAULT_IOS_VERSION),
+            macos_version: raw
+                .macos_version
+                .map(|str| VersionDouble::from_str(&str))
+                .transpose()
+                .map_err(Error::IosVersionInvalid)?
+                .unwrap_or(DEFAULT_MACOS_VERSION),
         })
     }
 
