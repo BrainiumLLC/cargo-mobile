@@ -53,6 +53,7 @@ pub struct Raw {
     pub macos_features: Option<Vec<String>>,
     pub ios_version: Option<String>,
     pub macos_version: Option<String>,
+    pub use_legacy_build_system: Option<bool>,
 }
 
 impl Raw {
@@ -71,6 +72,7 @@ impl Raw {
             macos_features: None,
             ios_version: None,
             macos_version: None,
+            use_legacy_build_system: None,
         })
     }
 
@@ -148,6 +150,7 @@ impl Raw {
             macos_features: None,
             ios_version: None,
             macos_version: None,
+            use_legacy_build_system: None,
         })
     }
 }

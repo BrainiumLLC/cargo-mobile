@@ -22,8 +22,10 @@ pub struct Platform {
     features: Option<Vec<String>>,
     frameworks: Option<Vec<String>>,
     vendor_frameworks: Option<Vec<String>>,
+    vendor_sdks: Option<Vec<String>>,
     asset_catalogs: Option<Vec<PathBuf>>,
     pods: Option<Vec<PathBuf>>,
+    additional_targets: Option<Vec<PathBuf>>,
 }
 
 impl Platform {
@@ -43,12 +45,20 @@ impl Platform {
         self.vendor_frameworks.as_deref().unwrap_or_else(|| &[])
     }
 
+    pub fn vendor_sdks(&self) -> &[String] {
+        self.vendor_sdks.as_deref().unwrap_or_else(|| &[])
+    }
+
     pub fn asset_catalogs(&self) -> Option<&[PathBuf]> {
         self.asset_catalogs.as_deref()
     }
 
     pub fn pods(&self) -> Option<&[PathBuf]> {
         self.pods.as_deref()
+    }
+  
+    pub fn additional_targets(&self) -> Option<&[PathBuf]> {
+        self.additional_targets.as_deref()
     }
 }
 
@@ -166,6 +176,7 @@ pub struct Config {
     project_dir: String,
     ios_version: VersionDouble,
     macos_version: VersionDouble,
+    use_legacy_build_system: bool,
 }
 
 impl Config {
@@ -202,7 +213,6 @@ impl Config {
                 );
                 Ok(DEFAULT_PROJECT_DIR.to_owned())
             })?;
-
         Ok(Self {
             app,
             development_team: raw.development_team,
@@ -219,6 +229,7 @@ impl Config {
                 .transpose()
                 .map_err(Error::IosVersionInvalid)?
                 .unwrap_or(DEFAULT_MACOS_VERSION),
+            use_legacy_build_system: raw.use_legacy_build_system.unwrap_or(true),
         })
     }
 

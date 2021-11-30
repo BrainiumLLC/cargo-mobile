@@ -100,14 +100,24 @@ pub fn gen(
             map.insert("file-groups", &source_dirs);
             map.insert("ios-frameworks", metadata.ios().frameworks());
             map.insert("ios-vendor-frameworks", metadata.ios().vendor_frameworks());
+            map.insert("ios-vendor-sdks", metadata.ios().vendor_sdks());
             map.insert("macos-frameworks", metadata.macos().frameworks());
             map.insert(
                 "macos-vendor-frameworks",
                 metadata.macos().vendor_frameworks(),
             );
+            map.insert("macos-vendor-sdks", metadata.macos().vendor_frameworks());
             map.insert("asset-catalogs", asset_catalogs);
             map.insert("ios-pods", ios_pods);
             map.insert("macos-pods", macos_pods);
+            map.insert(
+                "ios-additional-targets",
+                metadata.ios().additional_targets(),
+            );
+            map.insert(
+                "macos-additional-targets",
+                metadata.macos().additional_targets(),
+            );
         },
         filter.fun(),
     )
