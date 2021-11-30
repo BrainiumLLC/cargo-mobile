@@ -127,7 +127,8 @@ pub fn install(reinstall_deps: opts::ReinstallDeps) -> Result<(), InstallError> 
     {
         use crate::apple::deps::{GemCache, PackageSpec};
         PackageSpec::brew("bundletool")
-            .install(reinstall_deps, &mut GemCache::new()).map_err(InstallError)?;
+            .install(reinstall_deps, &mut GemCache::new())
+            .map_err(InstallError)?;
     }
     Ok(())
 }
