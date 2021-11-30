@@ -56,7 +56,7 @@ impl Platform {
     pub fn pods(&self) -> Option<&[PathBuf]> {
         self.pods.as_deref()
     }
-  
+
     pub fn additional_targets(&self) -> Option<&[PathBuf]> {
         self.additional_targets.as_deref()
     }
