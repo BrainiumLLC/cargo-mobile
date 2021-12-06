@@ -377,9 +377,9 @@ impl Exec for Input {
                 let mut host_env = HashMap::<&str, &OsStr>::new();
 
                 // Host flags that are used by build scripts
+                let macos_sdk_root =
+                    sdk_root.join("../../../../MacOSX.platform/Developer/SDKs/MacOSX.sdk");
                 let macos_isysroot = {
-                    let macos_sdk_root =
-                        sdk_root.join("../../../../MacOSX.platform/Developer/SDKs/MacOSX.sdk");
                     if !macos_sdk_root.is_dir() {
                         return Err(Error::MacosSdkRootInvalid { macos_sdk_root });
                     }
@@ -399,6 +399,7 @@ impl Exec for Input {
                 let macos_target = Target::macos();
 
                 let isysroot = format!("-isysroot {}", sdk_root.display());
+                let library_path = format!("{}/usr/lib", macos_sdk_root.display());
 
                 for arch in arches {
                     // Set target-specific flags
@@ -414,6 +415,7 @@ impl Exec for Input {
                     target_env.insert(cflags.as_ref(), isysroot.as_ref());
                     target_env.insert(cxxflags.as_ref(), isysroot.as_ref());
                     target_env.insert(objc_include_path.as_ref(), include_dir.as_ref());
+                    target_env.insert("LIBRARY_PATH", library_path.as_ref());
 
                     let target = if macos {
                         &macos_target
