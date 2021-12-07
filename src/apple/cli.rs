@@ -385,6 +385,8 @@ impl Exec for Input {
                     }
                     (
                         format!("-isysroot {}", macos_sdk_root.display()),
+                        // We need to manually specify a search path to link against the host's libraries for MacOs Big Sur
+                        // https://github.com/signalapp/libsignal-client/commit/02899cac643a14b2ced7c058cc15a836a2165b6d
                         format!("{}/usr/lib", macos_sdk_root.display()),
                     )
                 };
