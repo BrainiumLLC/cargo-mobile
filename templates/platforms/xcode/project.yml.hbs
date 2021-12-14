@@ -2,7 +2,8 @@ name: {{app.name}}
 options:
   bundleIdPrefix: {{reverse-domain app.domain}}
   deploymentTarget:
-    iOS: 9.0
+    iOS: {{apple.ios-version}}
+    macOS: {{apple.macos-version}}
 fileGroups: [{{join file-groups}}]
 configs:
   debug: debug
@@ -72,6 +73,8 @@ targets:
         embed: false
       {{~#each ios-vendor-frameworks}}
       - framework: {{prefix-path this}}{{/each}}
+      {{~#each ios-vendor-sdks}}
+      - sdk: {{prefix-path this}}{{/each}}
       - sdk: CoreGraphics.framework
       - sdk: Metal.framework
       - sdk: MetalKit.framework
@@ -106,6 +109,8 @@ targets:
         embed: false
       {{~#each macos-vendor-frameworks}}
       - framework: {{prefix-path this}}{{/each}}
+      {{~#each macos-vendor-sdks}}
+      - sdk: {{prefix-path this}}{{/each}}
       - sdk: Metal.framework
       {{~#each macos-frameworks}}
       - sdk: {{this}}.framework{{/each}}
