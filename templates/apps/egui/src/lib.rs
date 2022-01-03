@@ -1,10 +1,10 @@
 use std::iter;
 use std::time::Instant;
 
-use epi::*;
-use winit::event_loop::ControlFlow;
-use winit::event::{Event::*};
 use egui_wgpu_backend::{RenderPass, ScreenDescriptor};
+use epi::*;
+use winit::event::Event::*;
+use winit::event_loop::ControlFlow;
 
 use mobile_entry_point::mobile_entry_point;
 #[cfg(target_os = "android")]
@@ -23,7 +23,7 @@ static INITIAL_HEIGHT: u32 = 720;
 /// It sends the custom RequestRedraw event to the winit event loop.
 struct ExampleRepaintSignal(std::sync::Mutex<winit::event_loop::EventLoopProxy<Event>>);
 
-impl epi::RepaintSignal for ExampleRepaintSignal {
+impl epi::backend::RepaintSignal for ExampleRepaintSignal {
     fn request_repaint(&self) {
         self.0.lock().unwrap().send_event(Event::RequestRedraw).ok();
     }
@@ -103,7 +103,6 @@ fn main() {
         event_loop.create_proxy(),
     )));
 
-
     // We use the egui_wgpu_backend crate as the render backend.
     let mut egui_rpass = RenderPass::new(&device, surface_format, 1);
 
@@ -116,7 +115,7 @@ fn main() {
     let mut ctx = egui::CtxRef::default();
 
     event_loop.run(move |event, _, control_flow| {
-        *control_flow = ControlFlow::Wait;
+        *control_flow = ControlFlow::Poll;
 
         let mut redraw = || {
             if let Some(surface) = &surface {
@@ -134,9 +133,12 @@ fn main() {
                 let egui_start = Instant::now();
                 let raw_input: egui::RawInput = state.take_egui_input(&window);
                 ctx.begin_frame(raw_input);
-                let mut app_output = epi::backend::AppOutput::default();
 
-                let mut frame = epi::backend::FrameBuilder {
+                let app_output = epi::backend::AppOutput {
+                    ..Default::default()
+                };
+
+                let frame_data = epi::backend::FrameData {
                     info: epi::IntegrationInfo {
                         name: "egui_winit",
                         web_info: None,
@@ -144,14 +146,14 @@ fn main() {
                         native_pixels_per_point: Some(window.scale_factor() as _),
                         prefer_dark_mode: None,
                     },
-                    tex_allocator: &mut egui_rpass,
-                    output: &mut app_output,
+                    output: app_output,
                     repaint_signal: repaint_signal.clone(),
-                }
-                .build();
+                };
+
+                let frame = Frame::new(frame_data);
 
                 // Draw the demo application.
-                demo_app.update(&ctx, &mut frame);
+                demo_app.update(&ctx, &frame);
 
                 // End the UI frame. We could now handle the output and draw the UI with the backend.
                 let (_output, paint_commands) = ctx.end_frame();
@@ -170,7 +172,7 @@ fn main() {
                     physical_height: surface_config.height,
                     scale_factor: window.scale_factor() as f32,
                 };
-                egui_rpass.update_texture(&device, &queue, &ctx.texture());
+                egui_rpass.update_texture(&device, &queue, &ctx.font_image());
                 egui_rpass.update_user_textures(&device, &queue);
                 egui_rpass.update_buffers(&device, &queue, &paint_jobs, &screen_descriptor);
 
@@ -215,15 +217,15 @@ fn main() {
                                 surface.configure(&device, &surface_config);
                             }
                         }
-                    },
+                    }
                     winit::event::WindowEvent::CloseRequested => {
                         *control_flow = ControlFlow::Exit;
-                    },
+                    }
                     _ => {
                         state.on_event(&ctx, &event);
                     }
                 };
-            },
+            }
             _ => (),
         }
     });
