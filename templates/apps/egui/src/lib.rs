@@ -40,7 +40,7 @@ fn init_logging() {
 
 #[cfg(not(target_os = "android"))]
 fn init_logging() {
-    simple_logger::SimpleLogger::new().init().unwrap();
+    simple_logger::SimpleLogger::new().with_utc_timestamps().init().unwrap();
 }
 
 /// A simple egui + wgpu + winit based example.
