@@ -4,7 +4,9 @@ pub use self::raw::*;
 
 use crate::{
     config::app::App,
-    util::{self, cli::Report, VersionDouble, VersionDoubleError},
+    util::{
+        self, cli::Report, VersionDouble, VersionDoubleError, VersionTriple, VersionTripleError,
+    },
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -13,6 +15,7 @@ use std::{
 };
 
 static DEFAULT_PROJECT_DIR: &str = "gen/apple";
+const DEFAULT_APP_VERSION: VersionTriple = VersionTriple::new(1, 0, 0);
 const DEFAULT_IOS_VERSION: VersionDouble = VersionDouble::new(9, 0);
 const DEFAULT_MACOS_VERSION: VersionDouble = VersionDouble::new(11, 0);
 
@@ -137,6 +140,7 @@ pub enum Error {
     DevelopmentTeamMissing,
     DevelopmentTeamEmpty,
     ProjectDirInvalid(ProjectDirInvalid),
+    AppVersionInvalid(VersionTripleError),
     IosVersionInvalid(VersionDoubleError),
     MacOsVersionInvalid(VersionDoubleError),
 }
@@ -154,6 +158,10 @@ impl Error {
             Self::ProjectDirInvalid(err) => Report::error(
                 msg,
                 format!("`{}.project-dir` invalid: {}", super::NAME, err),
+            ),
+            Self::AppVersionInvalid(err) => Report::error(
+                msg,
+                format!("`{}.app-version` invalid: {}", super::NAME, err),
             ),
             Self::IosVersionInvalid(err) => Report::error(
                 msg,
@@ -174,6 +182,7 @@ pub struct Config {
     app: App,
     development_team: String,
     project_dir: String,
+    app_version: VersionTriple,
     ios_version: VersionDouble,
     macos_version: VersionDouble,
     use_legacy_build_system: bool,
@@ -217,6 +226,12 @@ impl Config {
             app,
             development_team: raw.development_team,
             project_dir,
+            app_version: raw
+                .app_version
+                .map(|str| VersionTriple::from_str(&str))
+                .transpose()
+                .map_err(Error::AppVersionInvalid)?
+                .unwrap_or(DEFAULT_APP_VERSION),
             ios_version: raw
                 .ios_version
                 .map(|str| VersionDouble::from_str(&str))
