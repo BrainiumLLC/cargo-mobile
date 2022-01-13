@@ -159,7 +159,7 @@ impl Error {
                 msg,
                 format!("`{}.project-dir` invalid: {}", super::NAME, err),
             ),
-            Self::AppVersionInvalid(err) => Report::error(
+            Self::BundleVersionInvalid(err) => Report::error(
                 msg,
                 format!("`{}.app-version` invalid: {}", super::NAME, err),
             ),
@@ -228,8 +228,8 @@ impl Config {
             .bundle_version_short
             .map(|str| VersionTriple::from_str(&str))
             .transpose()
-            .map_err(Error::AppVersionInvalid)?
-            .unwrap_or(DEFAULT_APP_VERSION);
+            .map_err(Error::BundleVersionInvalid)?
+            .unwrap_or(DEFAULT_BUNDLE_VERSION);
 
         Ok(Self {
             app,
@@ -239,7 +239,7 @@ impl Config {
                 .bundle_version
                 .map(|str| VersionTriple::from_str(&str))
                 .transpose()
-                .map_err(Error::AppVersionInvalid)?
+                .map_err(Error::BundleVersionInvalid)?
                 .unwrap_or(bundle_version_short),
             bundle_version_short,
             ios_version: raw
