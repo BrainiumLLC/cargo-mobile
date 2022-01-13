@@ -224,8 +224,8 @@ impl Config {
                 Ok(DEFAULT_PROJECT_DIR.to_owned())
             })?;
 
-        let bundle_version = raw
-            .bundle_version
+        let bundle_version_short = raw
+            .bundle_version_short
             .map(|str| VersionTriple::from_str(&str))
             .transpose()
             .map_err(Error::AppVersionInvalid)?
@@ -235,13 +235,13 @@ impl Config {
             app,
             development_team: raw.development_team,
             project_dir,
-            bundle_version,
-            bundle_version_short: raw
-                .bundle_version_short
+            bundle_version: raw
+                .bundle_version
                 .map(|str| VersionTriple::from_str(&str))
                 .transpose()
                 .map_err(Error::AppVersionInvalid)?
-                .unwrap_or(bundle_version),
+                .unwrap_or(bundle_version_short),
+            bundle_version_short,
             ios_version: raw
                 .ios_version
                 .map(|str| VersionDouble::from_str(&str))
