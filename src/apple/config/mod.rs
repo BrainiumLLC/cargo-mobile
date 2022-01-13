@@ -140,7 +140,7 @@ pub enum Error {
     DevelopmentTeamMissing,
     DevelopmentTeamEmpty,
     ProjectDirInvalid(ProjectDirInvalid),
-    AppVersionInvalid(VersionTripleError),
+    BundleVersionInvalid(VersionTripleError),
     IosVersionInvalid(VersionDoubleError),
     MacOsVersionInvalid(VersionDoubleError),
 }
