@@ -182,6 +182,7 @@ pub struct Config {
     app: App,
     development_team: String,
     project_dir: String,
+    // TODO: Allow support for [3, inf) integers
     bundle_version: VersionTriple,
     bundle_version_short: VersionTriple,
     ios_version: VersionDouble,
