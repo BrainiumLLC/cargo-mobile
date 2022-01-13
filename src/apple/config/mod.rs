@@ -182,7 +182,8 @@ pub struct Config {
     app: App,
     development_team: String,
     project_dir: String,
-    app_version: VersionTriple,
+    bundle_version: VersionTriple,
+    bundle_version_short: VersionTriple,
     ios_version: VersionDouble,
     macos_version: VersionDouble,
     use_legacy_build_system: bool,
@@ -222,16 +223,25 @@ impl Config {
                 );
                 Ok(DEFAULT_PROJECT_DIR.to_owned())
             })?;
+
+        let bundle_version = raw
+            .bundle_version
+            .map(|str| VersionTriple::from_str(&str))
+            .transpose()
+            .map_err(Error::AppVersionInvalid)?
+            .unwrap_or(DEFAULT_APP_VERSION);
+
         Ok(Self {
             app,
             development_team: raw.development_team,
             project_dir,
-            app_version: raw
-                .app_version
+            bundle_version,
+            bundle_version_short: raw
+                .bundle_version_short
                 .map(|str| VersionTriple::from_str(&str))
                 .transpose()
                 .map_err(Error::AppVersionInvalid)?
-                .unwrap_or(DEFAULT_APP_VERSION),
+                .unwrap_or(bundle_version),
             ios_version: raw
                 .ios_version
                 .map(|str| VersionDouble::from_str(&str))
