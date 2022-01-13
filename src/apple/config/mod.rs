@@ -15,7 +15,7 @@ use std::{
 };
 
 static DEFAULT_PROJECT_DIR: &str = "gen/apple";
-const DEFAULT_APP_VERSION: VersionTriple = VersionTriple::new(1, 0, 0);
+const DEFAULT_BUNDLE_VERSION: VersionTriple = VersionTriple::new(1, 0, 0);
 const DEFAULT_IOS_VERSION: VersionDouble = VersionDouble::new(9, 0);
 const DEFAULT_MACOS_VERSION: VersionDouble = VersionDouble::new(11, 0);
 
