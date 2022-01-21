@@ -95,9 +95,7 @@ pub struct DotCargoNet {
 
 impl DotCargoNet {
     pub fn new(git_fetch_with_cli: bool) -> Self {
-        Self {
-            git_fetch_with_cli: git_fetch_with_cli.into(),
-        }
+        Self { git_fetch_with_cli }
     }
 }
 
