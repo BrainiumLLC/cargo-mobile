@@ -3,6 +3,7 @@ use crate::{
     util::cli::{Report, Reportable},
 };
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::{collections::BTreeMap, fs, io, path::PathBuf};
 
 #[derive(Debug)]
@@ -87,18 +88,6 @@ impl DotCargoBuild {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct DotCargoNet {
-    git_fetch_with_cli: bool,
-}
-
-impl DotCargoNet {
-    pub fn new(git_fetch_with_cli: bool) -> Self {
-        Self { git_fetch_with_cli }
-    }
-}
-
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct DotCargoTarget {
     pub ar: Option<String>,
@@ -115,8 +104,9 @@ impl DotCargoTarget {
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct DotCargo {
     build: Option<DotCargoBuild>,
-    net: Option<DotCargoNet>,
     target: BTreeMap<String, DotCargoTarget>,
+    #[serde(flatten)]
+    extra: BTreeMap<String, Value>,
 }
 
 impl DotCargo {
