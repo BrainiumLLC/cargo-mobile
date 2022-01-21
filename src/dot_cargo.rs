@@ -87,6 +87,20 @@ impl DotCargoBuild {
     }
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct DotCargoNet {
+    git_fetch_with_cli: bool,
+}
+
+impl DotCargoNet {
+    pub fn new(git_fetch_with_cli: bool) -> Self {
+        Self {
+            git_fetch_with_cli: git_fetch_with_cli.into(),
+        }
+    }
+}
+
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct DotCargoTarget {
     pub ar: Option<String>,
@@ -103,6 +117,7 @@ impl DotCargoTarget {
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct DotCargo {
     build: Option<DotCargoBuild>,
+    net: Option<DotCargoNet>,
     target: BTreeMap<String, DotCargoTarget>,
 }
 
