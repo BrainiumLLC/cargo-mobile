@@ -3,8 +3,8 @@ use crate::{
     util::cli::{Report, Reportable},
 };
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::{collections::BTreeMap, fs, io, path::PathBuf};
+use toml::Value;
 
 #[derive(Debug)]
 pub enum LoadError {
