@@ -22,7 +22,7 @@ wgpu = "0.12"
 winit = "0.26"
 egui_demo_lib = "0.16"
 mobile-entry-point = "0.1"
-egui-winit = "0.16"
+egui-winit = { version = "0.16", default-features = false }
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.10.1"
