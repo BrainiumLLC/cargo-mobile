@@ -241,7 +241,7 @@ pub enum VersionDoubleError {
 }
 
 // Generic version double
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct VersionDouble {
     pub major: u32,
     pub minor: u32,
