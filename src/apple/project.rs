@@ -118,6 +118,15 @@ pub fn gen(
                 "macos-additional-targets",
                 metadata.macos().additional_targets(),
             );
+            map.insert("ios-pre-build-scripts", metadata.ios().pre_build_scripts());
+            map.insert(
+                "ios-post-compile-scripts",
+                metadata.ios().post_compile_scripts(),
+            );
+            map.insert(
+                "ios-post-build-scripts",
+                metadata.ios().post_build_scripts(),
+            );
         },
         filter.fun(),
     )

@@ -5,7 +5,8 @@ pub use self::raw::*;
 use crate::{
     config::app::App,
     util::{
-        self, cli::Report, VersionDouble, VersionDoubleError, VersionTriple, VersionTripleError,
+        self, cli::Report, BuildScript, VersionDouble, VersionDoubleError, VersionTriple,
+        VersionTripleError,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -29,6 +30,9 @@ pub struct Platform {
     asset_catalogs: Option<Vec<PathBuf>>,
     pods: Option<Vec<PathBuf>>,
     additional_targets: Option<Vec<PathBuf>>,
+    pre_build_scripts: Option<Vec<BuildScript>>,
+    post_compile_scripts: Option<Vec<BuildScript>>,
+    post_build_scripts: Option<Vec<BuildScript>>,
 }
 
 impl Platform {
@@ -62,6 +66,18 @@ impl Platform {
 
     pub fn additional_targets(&self) -> Option<&[PathBuf]> {
         self.additional_targets.as_deref()
+    }
+
+    pub fn pre_build_scripts(&self) -> Option<&[BuildScript]> {
+        self.pre_build_scripts.as_deref()
+    }
+
+    pub fn post_compile_scripts(&self) -> Option<&[BuildScript]> {
+        self.post_compile_scripts.as_deref()
+    }
+
+    pub fn post_build_scripts(&self) -> Option<&[BuildScript]> {
+        self.post_build_scripts.as_deref()
     }
 }
 

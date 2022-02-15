@@ -599,3 +599,20 @@ pub fn unwrap_either<T>(result: Result<T, T>) -> T {
         Ok(t) | Err(t) => t,
     }
 }
+
+#[derive(Debug, Default, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct BuildScript {
+    path: Option<String>,
+    script: Option<String>,
+    name: Option<String>,
+    input_files: Option<Vec<String>>,
+    output_files: Option<Vec<String>>,
+    input_file_lists: Option<Vec<String>>,
+    output_file_lists: Option<Vec<String>>,
+    shell: Option<String>,
+    show_env_vars: Option<bool>,
+    run_only_when_installing: Option<bool>,
+    based_on_dependency_analysis: Option<bool>,
+    discovered_dependency_file: Option<String>,
+}
