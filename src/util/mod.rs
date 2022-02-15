@@ -10,7 +10,7 @@ pub use self::{cargo::*, git::*, path::*};
 use self::cli::{Report, Reportable};
 use crate::os::{self, command_path};
 use once_cell_regex::{exports::regex::Captures, exports::regex::Regex, regex};
-use serde::{ser::Serializer, Serialize};
+use serde::{ser::Serializer, Deserialize, Serialize};
 use std::{
     fmt::{self, Debug, Display},
     io::{self, Write},
@@ -600,19 +600,31 @@ pub fn unwrap_either<T>(result: Result<T, T>) -> T {
     }
 }
 
-#[derive(Debug, Default, Serialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct BuildScript {
+    #[serde(skip_serializing_if = "Option::is_none")]
     path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     script: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     input_files: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     output_files: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     input_file_lists: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     output_file_lists: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     shell: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     show_env_vars: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     run_only_when_installing: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     based_on_dependency_analysis: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     discovered_dependency_file: Option<String>,
 }
