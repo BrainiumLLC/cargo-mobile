@@ -309,16 +309,6 @@ pub struct Pod {
     version: Option<String>,
 }
 
-impl Display for Pod {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(version) = &self.version {
-            write!(f, "{}: {}", self.name, version)
-        } else {
-            write!(f, "{}", self.name)
-        }
-    }
-}
-
 #[derive(Debug, Error)]
 pub enum RustVersionError {
     #[error("Failed to check rustc version: {0}")]
