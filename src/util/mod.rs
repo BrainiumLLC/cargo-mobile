@@ -10,7 +10,7 @@ pub use self::{cargo::*, git::*, path::*};
 use self::cli::{Report, Reportable};
 use crate::os::{self, command_path};
 use once_cell_regex::{exports::regex::Captures, exports::regex::Regex, regex};
-use serde::{ser::Serializer, Serialize};
+use serde::{ser::Serializer, Deserialize, Serialize};
 use std::{
     fmt::{self, Debug, Display},
     io::{self, Write},
@@ -241,7 +241,7 @@ pub enum VersionDoubleError {
 }
 
 // Generic version double
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Deserialize)]
 pub struct VersionDouble {
     pub major: u32,
     pub minor: u32,
@@ -302,59 +302,19 @@ impl VersionDouble {
     }
 }
 
-#[derive(Debug, Error)]
-pub enum PodError {
-    #[error("Failed to parse version double [0]")]
-    VersionDoubleError(#[from] VersionDoubleError),
-    #[error("Failed to parse pod string {pod:?}: string must be in format `PodName[:PodVersion]")]
-    PodStringInvalid { pod: String },
-}
-
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct Pod {
     name: String,
-    version: Option<VersionDouble>,
+    version: Option<String>,
 }
 
 impl Display for Pod {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {}", self.name, self.version)
-    }
-}
-
-impl Serialize for Pod {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.collect_str(self)
-    }
-}
-
-impl Pod {
-    pub const fn new(name: String, major: u32, minor: u32) -> Self {
-        Self {
-            name,
-            version: Some(VersionDouble { major, minor }),
-        }
-    }
-
-    pub fn from_str(p: &str) -> Result<Self, PodError> {
-        match p.split(":").count() {
-            1 => Ok(Self {
-                name: p.to_owned(),
-                version: None,
-            }),
-            2 => {
-                let mut s = p.split(".");
-                let name = s.next().unwrap().to_owned();
-                let version = VersionDouble::from_str(s.next().unwrap())?;
-                Ok(Self {
-                    name,
-                    version: Some(version),
-                })
-            }
-            _ => Err(PodError::PodStringInvalid { pod: p.to_owned() }),
+        if let Some(version) = &self.version {
+            write!(f, "{}: {}", self.name, version)
+        } else {
+            write!(f, "{}", self.name)
         }
     }
 }
