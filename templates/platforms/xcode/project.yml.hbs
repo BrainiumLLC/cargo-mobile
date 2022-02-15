@@ -85,98 +85,59 @@ targets:
       - sdk: UIKit.framework
       {{~#each ios-frameworks}}
       - sdk: {{this}}.framework{{/each}}
-      
     {{~#each ios-pre-build-scripts}}
-    preBuildScripts:
-    {{#if this.path}}
-      - path {{this.path}}{{/if}}
-    {{#if this.name}}
-        name: {{this.name}}{{/if}}
-    {{#if this.script}}
-        script: {{this.script}}{{/if}}
-    {{#if this.input_files}}
+    preBuildScripts:{{#if this.path}}
+      - path {{this.path}}{{/if}}{{#if this.name}}
+        name: {{this.name}}{{/if}}{{#if this.script}}
+        script: {{this.script}}{{/if}}{{#if this.input_files}} 
         inputFiles: {{~#each this.input_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.output_files}}
+          - {{this}}{{/each}}{{/if}}{{#if this.output_files}}
         outputFiles: {{~#each this.output_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.input_file_lists}}
+          - {{this}}{{/each}}{{/if}}{{#if this.input_file_lists}}
         inputFileLists: {{~#each this.output_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.output_file_lists}}
+          - {{this}}{{/each}}{{/if}}{{#if this.output_file_lists}}
         outputFileLists: {{~#each this.output_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.shell}}
-        shell: {{this.shell}}{{/if}}
-    {{#if this.show_env_vars}}
-        showEnvVars: {{this.show_env_vars}}{{/if}}
-    {{#if this.run_only_when_installing}}
-        runOnlyWhenInstalling: {{this.run_only_when_installing}}{{/if}}
-    {{#if this.based_on_dependency_analysis}}
-        basedOnDependencyAnalysis: {{this.based_on_dependency_analysis}}{{/if}}
-    {{#if this.discovered_dependency_file}}
+          - {{this}}{{/each}}{{/if}}{{#if this.shell}}
+        shell: {{this.shell}}{{/if}}{{#if this.show_env_vars}}
+        showEnvVars: {{this.show_env_vars}}{{/if}}{{#if this.run_only_when_installing}}
+        runOnlyWhenInstalling: {{this.run_only_when_installing}}{{/if}}{{#if this.based_on_dependency_analysis}}
+        basedOnDependencyAnalysis: {{this.based_on_dependency_analysis}}{{/if}}{{#if this.discovered_dependency_file}}
         discoveredDependencyFile: {{this.discovered_dependency_file}}{{/if}}{{/each}}
-
     {{~#each ios-post-compile-scripts}}
-    postCompileScripts:
-    {{#if this.path}}
-      - path {{this.path}}{{/if}}
-    {{#if this.name}}
-        name: {{this.name}}{{/if}}
-    {{#if this.script}}
-        script: {{this.script}}{{/if}}
-    {{#if this.input_files}}
+    postCompileScripts:{{#if this.path}}
+      - path {{this.path}}{{/if}}{{#if this.name}}
+        name: {{this.name}}{{/if}}{{#if this.script}}
+        script: {{this.script}}{{/if}}{{#if this.input_files}} 
         inputFiles: {{~#each this.input_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.output_files}}
+          - {{this}}{{/each}}{{/if}}{{#if this.output_files}}
         outputFiles: {{~#each this.output_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.input_file_lists}}
+          - {{this}}{{/each}}{{/if}}{{#if this.input_file_lists}}
         inputFileLists: {{~#each this.output_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.output_file_lists}}
+          - {{this}}{{/each}}{{/if}}{{#if this.output_file_lists}}
         outputFileLists: {{~#each this.output_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.shell}}
-        shell: {{this.shell}}{{/if}}
-    {{#if this.show_env_vars}}
-        showEnvVars: {{this.show_env_vars}}{{/if}}
-    {{#if this.run_only_when_installing}}
-        runOnlyWhenInstalling: {{this.run_only_when_installing}}{{/if}}
-    {{#if this.based_on_dependency_analysis}}
-        basedOnDependencyAnalysis: {{this.based_on_dependency_analysis}}{{/if}}
-    {{#if this.discovered_dependency_file}}
+          - {{this}}{{/each}}{{/if}}{{#if this.shell}}
+        shell: {{this.shell}}{{/if}}{{#if this.show_env_vars}}
+        showEnvVars: {{this.show_env_vars}}{{/if}}{{#if this.run_only_when_installing}}
+        runOnlyWhenInstalling: {{this.run_only_when_installing}}{{/if}}{{#if this.based_on_dependency_analysis}}
+        basedOnDependencyAnalysis: {{this.based_on_dependency_analysis}}{{/if}}{{#if this.discovered_dependency_file}}
         discoveredDependencyFile: {{this.discovered_dependency_file}}{{/if}}{{/each}}
-
     {{~#each ios-post-build-scripts}}
-    postBuildScripts:
-    {{#if this.path}}
-      - path {{this.path}}{{/if}}
-    {{#if this.name}}
-        name: {{this.name}}{{/if}}
-    {{#if this.script}}
-        script: {{this.script}}{{/if}}
-    {{#if this.input_files}}
+    postBuildScripts:{{#if this.path}}
+      - path {{this.path}}{{/if}}{{#if this.name}}
+        name: {{this.name}}{{/if}}{{#if this.script}}
+        script: {{this.script}}{{/if}}{{#if this.input_files}} 
         inputFiles: {{~#each this.input_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.output_files}}
+          - {{this}}{{/each}}{{/if}}{{#if this.output_files}}
         outputFiles: {{~#each this.output_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.input_file_lists}}
+          - {{this}}{{/each}}{{/if}}{{#if this.input_file_lists}}
         inputFileLists: {{~#each this.output_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.output_file_lists}}
+          - {{this}}{{/each}}{{/if}}{{#if this.output_file_lists}}
         outputFileLists: {{~#each this.output_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.shell}}
-        shell: {{this.shell}}{{/if}}
-    {{#if this.show_env_vars}}
-        showEnvVars: {{this.show_env_vars}}{{/if}}
-    {{#if this.run_only_when_installing}}
-        runOnlyWhenInstalling: {{this.run_only_when_installing}}{{/if}}
-    {{#if this.based_on_dependency_analysis}}
-        basedOnDependencyAnalysis: {{this.based_on_dependency_analysis}}{{/if}}
-    {{#if this.discovered_dependency_file}}
+          - {{this}}{{/each}}{{/if}}{{#if this.shell}}
+        shell: {{this.shell}}{{/if}}{{#if this.show_env_vars}}
+        showEnvVars: {{this.show_env_vars}}{{/if}}{{#if this.run_only_when_installing}}
+        runOnlyWhenInstalling: {{this.run_only_when_installing}}{{/if}}{{#if this.based_on_dependency_analysis}}
+        basedOnDependencyAnalysis: {{this.based_on_dependency_analysis}}{{/if}}{{#if this.discovered_dependency_file}}
         discoveredDependencyFile: {{this.discovered_dependency_file}}{{/if}}{{/each}}
   {{app.name}}_macOS:
     type: application
@@ -209,97 +170,59 @@ targets:
       - sdk: Metal.framework
       {{~#each macos-frameworks}}
       - sdk: {{this}}.framework{{/each}}
-    {{~#each ios-pre-build-scripts}}
-    preBuildScripts:
-    {{#if this.path}}
-      - path {{this.path}}{{/if}}
-    {{#if this.name}}
-        name: {{this.name}}{{/if}}
-    {{#if this.script}}
-        script: {{this.script}}{{/if}}
-    {{#if this.input_files}}
+    {{~#each macos-pre-build-scripts}}
+    preBuildScripts:{{#if this.path}}
+      - path {{this.path}}{{/if}}{{#if this.name}}
+        name: {{this.name}}{{/if}}{{#if this.script}}
+        script: {{this.script}}{{/if}}{{#if this.input_files}} 
         inputFiles: {{~#each this.input_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.output_files}}
+          - {{this}}{{/each}}{{/if}}{{#if this.output_files}}
         outputFiles: {{~#each this.output_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.input_file_lists}}
+          - {{this}}{{/each}}{{/if}}{{#if this.input_file_lists}}
         inputFileLists: {{~#each this.output_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.output_file_lists}}
+          - {{this}}{{/each}}{{/if}}{{#if this.output_file_lists}}
         outputFileLists: {{~#each this.output_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.shell}}
-        shell: {{this.shell}}{{/if}}
-    {{#if this.show_env_vars}}
-        showEnvVars: {{this.show_env_vars}}{{/if}}
-    {{#if this.run_only_when_installing}}
-        runOnlyWhenInstalling: {{this.run_only_when_installing}}{{/if}}
-    {{#if this.based_on_dependency_analysis}}
-        basedOnDependencyAnalysis: {{this.based_on_dependency_analysis}}{{/if}}
-    {{#if this.discovered_dependency_file}}
+          - {{this}}{{/each}}{{/if}}{{#if this.shell}}
+        shell: {{this.shell}}{{/if}}{{#if this.show_env_vars}}
+        showEnvVars: {{this.show_env_vars}}{{/if}}{{#if this.run_only_when_installing}}
+        runOnlyWhenInstalling: {{this.run_only_when_installing}}{{/if}}{{#if this.based_on_dependency_analysis}}
+        basedOnDependencyAnalysis: {{this.based_on_dependency_analysis}}{{/if}}{{#if this.discovered_dependency_file}}
         discoveredDependencyFile: {{this.discovered_dependency_file}}{{/if}}{{/each}}
-
-    {{~#each ios-post-compile-scripts}}
-    postCompileScripts:
-    {{#if this.path}}
-      - path {{this.path}}{{/if}}
-    {{#if this.name}}
-        name: {{this.name}}{{/if}}
-    {{#if this.script}}
-        script: {{this.script}}{{/if}}
-    {{#if this.input_files}}
+    {{~#each macos-post-compile-scripts}}
+    postCompileScripts:{{#if this.path}}
+      - path {{this.path}}{{/if}}{{#if this.name}}
+        name: {{this.name}}{{/if}}{{#if this.script}}
+        script: {{this.script}}{{/if}}{{#if this.input_files}} 
         inputFiles: {{~#each this.input_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.output_files}}
+          - {{this}}{{/each}}{{/if}}{{#if this.output_files}}
         outputFiles: {{~#each this.output_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.input_file_lists}}
+          - {{this}}{{/each}}{{/if}}{{#if this.input_file_lists}}
         inputFileLists: {{~#each this.output_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.output_file_lists}}
+          - {{this}}{{/each}}{{/if}}{{#if this.output_file_lists}}
         outputFileLists: {{~#each this.output_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.shell}}
-        shell: {{this.shell}}{{/if}}
-    {{#if this.show_env_vars}}
-        showEnvVars: {{this.show_env_vars}}{{/if}}
-    {{#if this.run_only_when_installing}}
-        runOnlyWhenInstalling: {{this.run_only_when_installing}}{{/if}}
-    {{#if this.based_on_dependency_analysis}}
-        basedOnDependencyAnalysis: {{this.based_on_dependency_analysis}}{{/if}}
-    {{#if this.discovered_dependency_file}}
+          - {{this}}{{/each}}{{/if}}{{#if this.shell}}
+        shell: {{this.shell}}{{/if}}{{#if this.show_env_vars}}
+        showEnvVars: {{this.show_env_vars}}{{/if}}{{#if this.run_only_when_installing}}
+        runOnlyWhenInstalling: {{this.run_only_when_installing}}{{/if}}{{#if this.based_on_dependency_analysis}}
+        basedOnDependencyAnalysis: {{this.based_on_dependency_analysis}}{{/if}}{{#if this.discovered_dependency_file}}
         discoveredDependencyFile: {{this.discovered_dependency_file}}{{/if}}{{/each}}
-
-    {{~#each ios-post-build-scripts}}
-    postBuildScripts:
-    {{#if this.path}}
-      - path {{this.path}}{{/if}}
-    {{#if this.name}}
-        name: {{this.name}}{{/if}}
-    {{#if this.script}}
-        script: {{this.script}}{{/if}}
-    {{#if this.input_files}}
+    {{~#each macos-post-build-scripts}}
+    postBuildScripts:{{#if this.path}}
+      - path {{this.path}}{{/if}}{{#if this.name}}
+        name: {{this.name}}{{/if}}{{#if this.script}}
+        script: {{this.script}}{{/if}}{{#if this.input_files}} 
         inputFiles: {{~#each this.input_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.output_files}}
+          - {{this}}{{/each}}{{/if}}{{#if this.output_files}}
         outputFiles: {{~#each this.output_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.input_file_lists}}
+          - {{this}}{{/each}}{{/if}}{{#if this.input_file_lists}}
         inputFileLists: {{~#each this.output_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.output_file_lists}}
+          - {{this}}{{/each}}{{/if}}{{#if this.output_file_lists}}
         outputFileLists: {{~#each this.output_files}}
-          - {{this}}{{/each}}{{/if}}
-    {{#if this.shell}}
-        shell: {{this.shell}}{{/if}}
-    {{#if this.show_env_vars}}
-        showEnvVars: {{this.show_env_vars}}{{/if}}
-    {{#if this.run_only_when_installing}}
-        runOnlyWhenInstalling: {{this.run_only_when_installing}}{{/if}}
-    {{#if this.based_on_dependency_analysis}}
-        basedOnDependencyAnalysis: {{this.based_on_dependency_analysis}}{{/if}}
-    {{#if this.discovered_dependency_file}}
+          - {{this}}{{/each}}{{/if}}{{#if this.shell}}
+        shell: {{this.shell}}{{/if}}{{#if this.show_env_vars}}
+        showEnvVars: {{this.show_env_vars}}{{/if}}{{#if this.run_only_when_installing}}
+        runOnlyWhenInstalling: {{this.run_only_when_installing}}{{/if}}{{#if this.based_on_dependency_analysis}}
+        basedOnDependencyAnalysis: {{this.based_on_dependency_analysis}}{{/if}}{{#if this.discovered_dependency_file}}
         discoveredDependencyFile: {{this.discovered_dependency_file}}{{/if}}{{/each}}
   lib_{{app.name}}_iOS:
     type: ""
