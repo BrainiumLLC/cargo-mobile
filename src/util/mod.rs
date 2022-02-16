@@ -162,6 +162,32 @@ impl VersionTriple {
         ))
     }
 
+    fn from_split(
+        split: &mut std::str::Split<&str>,
+        version: &str,
+    ) -> Result<Self, VersionTripleError> {
+        Ok(VersionTriple {
+            major: split.next().unwrap().parse().map_err(|source| {
+                VersionTripleError::MajorInvalid {
+                    version: version.to_owned(),
+                    source,
+                }
+            })?,
+            minor: split.next().unwrap().parse().map_err(|source| {
+                VersionTripleError::MinorInvalid {
+                    version: version.to_owned(),
+                    source,
+                }
+            })?,
+            patch: split.next().unwrap().parse().map_err(|source| {
+                VersionTripleError::PatchInvalid {
+                    version: version.to_owned(),
+                    source,
+                }
+            })?,
+        })
+    }
+
     pub fn from_str(v: &str) -> Result<Self, VersionTripleError> {
         match v.split(".").count() {
             1 => Ok(VersionTriple {
@@ -194,26 +220,7 @@ impl VersionTriple {
             }
             3 => {
                 let mut s = v.split(".");
-                Ok(VersionTriple {
-                    major: s.next().unwrap().parse().map_err(|source| {
-                        VersionTripleError::MajorInvalid {
-                            version: v.to_owned(),
-                            source,
-                        }
-                    })?,
-                    minor: s.next().unwrap().parse().map_err(|source| {
-                        VersionTripleError::MinorInvalid {
-                            version: v.to_owned(),
-                            source,
-                        }
-                    })?,
-                    patch: s.next().unwrap().parse().map_err(|source| {
-                        VersionTripleError::PatchInvalid {
-                            version: v.to_owned(),
-                            source,
-                        }
-                    })?,
-                })
+                Self::from_split(&mut s, v)
             }
             _ => Err(VersionTripleError::VersionStringInvalid {
                 version: v.to_owned(),
@@ -224,6 +231,11 @@ impl VersionTriple {
 
 #[derive(Debug, Error)]
 pub enum VersionNumberError {
+    #[error("Failed to parse extra version version from {version:?}: {source}")]
+    ExtraVersionINvalid {
+        version: String,
+        source: std::num::ParseIntError,
+    },
     #[error("Failed to parse version triple.")]
     VersionTriplerError(#[from] VersionTripleError),
 }
@@ -270,7 +282,19 @@ impl VersionNumber {
                 })
             }
             _ => {
-                todo!()
+                let mut s = v.split(".");
+                let triple = VersionTriple::from_split(&mut s, v)?;
+                let extra = Some(
+                    s.map(|s| {
+                        s.parse()
+                            .map_err(|source| VersionNumberError::ExtraVersionINvalid {
+                                version: v.to_owned(),
+                                source,
+                            })
+                    })
+                    .collect::<Result<Vec<u32>, _>>()?,
+                );
+                Ok(Self { triple, extra })
             }
         }
     }
