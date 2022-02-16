@@ -302,6 +302,13 @@ impl VersionDouble {
     }
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct Pod {
+    name: String,
+    version: Option<String>,
+}
+
 #[derive(Debug, Error)]
 pub enum RustVersionError {
     #[error("Failed to check rustc version: {0}")]

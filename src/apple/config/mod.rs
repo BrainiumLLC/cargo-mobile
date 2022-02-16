@@ -5,7 +5,8 @@ pub use self::raw::*;
 use crate::{
     config::app::App,
     util::{
-        self, cli::Report, VersionDouble, VersionDoubleError, VersionTriple, VersionTripleError,
+        self, cli::Report, Pod, VersionDouble, VersionDoubleError, VersionTriple,
+        VersionTripleError,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -56,7 +57,7 @@ pub struct Platform {
     vendor_frameworks: Option<Vec<String>>,
     vendor_sdks: Option<Vec<String>>,
     asset_catalogs: Option<Vec<PathBuf>>,
-    pods: Option<Vec<PathBuf>>,
+    pods: Option<Vec<Pod>>,
     additional_targets: Option<Vec<PathBuf>>,
     pre_build_scripts: Option<Vec<BuildScript>>,
     post_compile_scripts: Option<Vec<BuildScript>>,
@@ -88,7 +89,7 @@ impl Platform {
         self.asset_catalogs.as_deref()
     }
 
-    pub fn pods(&self) -> Option<&[PathBuf]> {
+    pub fn pods(&self) -> Option<&[Pod]> {
         self.pods.as_deref()
     }
 
@@ -232,6 +233,7 @@ pub struct Config {
     ios_version: VersionDouble,
     macos_version: VersionDouble,
     use_legacy_build_system: bool,
+    plist_pairs: Vec<PListPair>,
 }
 
 impl Config {
@@ -300,6 +302,7 @@ impl Config {
                 .map_err(Error::IosVersionInvalid)?
                 .unwrap_or(DEFAULT_MACOS_VERSION),
             use_legacy_build_system: raw.use_legacy_build_system.unwrap_or(true),
+            plist_pairs: raw.plist_pairs.unwrap_or_default(),
         })
     }
 
