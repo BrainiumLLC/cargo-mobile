@@ -5,7 +5,8 @@ pub use self::raw::*;
 use crate::{
     config::app::App,
     util::{
-        self, cli::Report, VersionDouble, VersionDoubleError, VersionTriple, VersionTripleError,
+        self, cli::Report, VersionDouble, VersionDoubleError, VersionNumber, VersionNumberError,
+        VersionTriple, VersionTripleError,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -141,6 +142,7 @@ pub enum Error {
     DevelopmentTeamEmpty,
     ProjectDirInvalid(ProjectDirInvalid),
     BundleVersionInvalid(VersionTripleError),
+    BundleVersionLongInvalid(VersionNumberError),
     IosVersionInvalid(VersionDoubleError),
     MacOsVersionInvalid(VersionDoubleError),
 }
@@ -171,6 +173,10 @@ impl Error {
                 msg,
                 format!("`{}.macos-version` invalid: {}", super::NAME, err),
             ),
+            Self::BundleVersionLongInvalid(err) => Report::error(
+                msg,
+                format!("`{}.macos-version` invalid: {}", super::NAME, err), // TODO: !
+            ),
         }
     }
 }
@@ -183,7 +189,7 @@ pub struct Config {
     development_team: String,
     project_dir: String,
     // TODO: Allow support for [3, inf) integers
-    bundle_version: VersionTriple,
+    bundle_version: VersionNumber,
     bundle_version_short: VersionTriple,
     ios_version: VersionDouble,
     macos_version: VersionDouble,
@@ -238,10 +244,10 @@ impl Config {
             project_dir,
             bundle_version: raw
                 .bundle_version
-                .map(|str| VersionTriple::from_str(&str))
+                .map(|str| VersionNumber::from_str(&str))
                 .transpose()
-                .map_err(Error::BundleVersionInvalid)?
-                .unwrap_or(bundle_version_short),
+                .map_err(Error::BundleVersionLongInvalid)?
+                .unwrap_or(VersionNumber::new_from_triple(bundle_version_short)),
             bundle_version_short,
             ios_version: raw
                 .ios_version

@@ -268,6 +268,13 @@ impl Serialize for VersionNumber {
 }
 
 impl VersionNumber {
+    pub fn new_from_triple(triple: VersionTriple) -> Self {
+        Self {
+            triple,
+            extra: None,
+        }
+    }
+
     pub const fn new(triple: VersionTriple, extra: Option<Vec<u32>>) -> Self {
         Self { triple, extra }
     }
