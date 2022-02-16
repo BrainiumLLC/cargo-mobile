@@ -223,6 +223,60 @@ impl VersionTriple {
 }
 
 #[derive(Debug, Error)]
+pub enum VersionNumberError {
+    #[error("Failed to parse version triple.")]
+    VersionTriplerError(#[from] VersionTripleError),
+}
+
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub struct VersionNumber {
+    triple: VersionTriple,
+    extra: Option<Vec<u32>>,
+}
+
+impl Display for VersionNumber {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.triple)?;
+        if let Some(extra) = &self.extra {
+            for number in extra {
+                write!(f, ".{}", number)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl Serialize for VersionNumber {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.collect_str(self)
+    }
+}
+
+impl VersionNumber {
+    pub const fn new(triple: VersionTriple, extra: Option<Vec<u32>>) -> Self {
+        Self { triple, extra }
+    }
+
+    pub fn from_str(v: &str) -> Result<Self, VersionNumberError> {
+        match v.split(".").count() {
+            1 | 2 | 3 => {
+                let triple = VersionTriple::from_str(v)?;
+                Ok(Self {
+                    triple,
+                    extra: None,
+                })
+            }
+            _ => {
+                todo!()
+            }
+        }
+    }
+}
+
+#[derive(Debug, Error)]
 pub enum VersionDoubleError {
     #[error("Failed to parse major version from {version:?}: {source}")]
     MajorInvalid {
