@@ -87,9 +87,9 @@ targets:
       - sdk: {{this}}.framework{{/each}}
     {{~#each ios-pre-build-scripts}}
     preBuildScripts:{{#if this.path}}
-      - path {{this.path}}{{/if}}{{#if this.name}}
-        name: {{this.name}}{{/if}}{{#if this.script}}
-        script: {{this.script}}{{/if}}{{#if this.input_files}} 
+      - path {{this.path}}{{/if}}{{#if this.script}}
+      - script: {{this.script}}{{/if}}{{#if this.name}}
+        name: {{this.name}}{{/if}}{{#if this.input_files}}
         inputFiles: {{~#each this.input_files}}
           - {{this}}{{/each}}{{/if}}{{#if this.output_files}}
         outputFiles: {{~#each this.output_files}}
@@ -105,9 +105,9 @@ targets:
         discoveredDependencyFile: {{this.discovered_dependency_file}}{{/if}}{{/each}}
     {{~#each ios-post-compile-scripts}}
     postCompileScripts:{{#if this.path}}
-      - path {{this.path}}{{/if}}{{#if this.name}}
-        name: {{this.name}}{{/if}}{{#if this.script}}
-        script: {{this.script}}{{/if}}{{#if this.input_files}} 
+      - path {{this.path}}{{/if}}{{#if this.script}}
+      - script: {{this.script}}{{/if}}{{#if this.name}}
+        name: {{this.name}}{{/if}}{{#if this.input_files}}
         inputFiles: {{~#each this.input_files}}
           - {{this}}{{/each}}{{/if}}{{#if this.output_files}}
         outputFiles: {{~#each this.output_files}}
@@ -123,9 +123,9 @@ targets:
         discoveredDependencyFile: {{this.discovered_dependency_file}}{{/if}}{{/each}}
     {{~#each ios-post-build-scripts}}
     postBuildScripts:{{#if this.path}}
-      - path {{this.path}}{{/if}}{{#if this.name}}
-        name: {{this.name}}{{/if}}{{#if this.script}}
-        script: {{this.script}}{{/if}}{{#if this.input_files}} 
+      - path {{this.path}}{{/if}}{{#if this.script}}
+      - script: {{this.script}}{{/if}}{{#if this.name}}
+        name: {{this.name}}{{/if}}{{#if this.input_files}} 
         inputFiles: {{~#each this.input_files}}
           - {{this}}{{/each}}{{/if}}{{#if this.output_files}}
         outputFiles: {{~#each this.output_files}}
@@ -172,9 +172,9 @@ targets:
       - sdk: {{this}}.framework{{/each}}
     {{~#each macos-pre-build-scripts}}
     preBuildScripts:{{#if this.path}}
-      - path {{this.path}}{{/if}}{{#if this.name}}
-        name: {{this.name}}{{/if}}{{#if this.script}}
-        script: {{this.script}}{{/if}}{{#if this.input_files}} 
+      - path {{this.path}}{{/if}}{{#if this.script}}
+      - script: {{this.script}}{{/if}}{{#if this.name}}
+        name: {{this.name}}{{/if}}{{#if this.input_files}}
         inputFiles: {{~#each this.input_files}}
           - {{this}}{{/each}}{{/if}}{{#if this.output_files}}
         outputFiles: {{~#each this.output_files}}
@@ -190,9 +190,9 @@ targets:
         discoveredDependencyFile: {{this.discovered_dependency_file}}{{/if}}{{/each}}
     {{~#each macos-post-compile-scripts}}
     postCompileScripts:{{#if this.path}}
-      - path {{this.path}}{{/if}}{{#if this.name}}
-        name: {{this.name}}{{/if}}{{#if this.script}}
-        script: {{this.script}}{{/if}}{{#if this.input_files}} 
+      - path {{this.path}}{{/if}}{{#if this.script}}
+      - script: {{this.script}}{{/if}}{{#if this.name}}
+        name: {{this.name}}{{/if}}{{#if this.input_files}}
         inputFiles: {{~#each this.input_files}}
           - {{this}}{{/each}}{{/if}}{{#if this.output_files}}
         outputFiles: {{~#each this.output_files}}
@@ -208,9 +208,9 @@ targets:
         discoveredDependencyFile: {{this.discovered_dependency_file}}{{/if}}{{/each}}
     {{~#each macos-post-build-scripts}}
     postBuildScripts:{{#if this.path}}
-      - path {{this.path}}{{/if}}{{#if this.name}}
-        name: {{this.name}}{{/if}}{{#if this.script}}
-        script: {{this.script}}{{/if}}{{#if this.input_files}} 
+      - path {{this.path}}{{/if}}{{#if this.script}}
+      - script: {{this.script}}{{/if}}{{#if this.name}}
+        name: {{this.name}}{{/if}}{{#if this.input_files}}
         inputFiles: {{~#each this.input_files}}
           - {{this}}{{/each}}{{/if}}{{#if this.output_files}}
         outputFiles: {{~#each this.output_files}}
