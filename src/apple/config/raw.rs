@@ -42,7 +42,7 @@ impl Display for PromptError {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PListPair {
     key: String,
     value: String,
