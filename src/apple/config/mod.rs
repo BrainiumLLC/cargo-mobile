@@ -146,6 +146,7 @@ pub enum Error {
     MacOsVersionInvalid(VersionDoubleError),
     IosVersionNumberError(VersionNumberError),
     IosVersionNumberMismatch,
+    InvalidVersionConfiguration,
 }
 
 impl Error {
@@ -185,10 +186,18 @@ impl Error {
                     super::NAME
                 ),
             ),
+            Self::InvalidVersionConfiguration => Report::error(
+                msg,
+                format!(
+                    "`{}.app-version` bundle-version-short cannot be specified without bundle-version",
+                    super::NAME
+                ),
+            ),
         }
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct VersionInfo {
     pub version_number: Option<VersionNumber>,
     pub short_version_number: Option<VersionTriple>,
@@ -209,6 +218,9 @@ impl VersionInfo {
             .map(|version_string| VersionTriple::from_str(&version_string))
             .transpose()
             .map_err(Error::BundleVersionInvalid)?;
+        if short_version_number.is_some() && version_number.is_none() {
+            return Err(Error::InvalidVersionConfiguration);
+        }
         if let Some((version_number, short_version_number)) =
             version_number.as_ref().zip(short_version_number)
         {
