@@ -311,22 +311,27 @@ impl Exec for Input {
                 profile: cli::Profile { profile },
             } => with_config(non_interactive, wrapper, |config, _| {
                 let build_number = build_number.flatten();
-                let app_version = if let Some(build_number) = build_number {
-                    if let Some(bundle_version_extra) = &config.bundle_version().extra {
-                        if !bundle_version_extra.is_empty() {
-                            panic!();
-                        } else {
-                            VersionNumber::new(
-                                config.bundle_version().triple,
-                                Some(vec![build_number]),
-                            )
-                        }
-                    } else {
-                        VersionNumber::new(config.bundle_version().triple, Some(vec![build_number]))
-                    }
-                } else {
-                    config.bundle_version().clone()
-                };
+                let app_version = build_number.map_or_else(
+                    || config.bundle_version().clone(),
+                    |build_number| {
+                        config.bundle_version().extra.as_ref().map_or_else(
+                            || {
+                                VersionNumber::new(
+                                    config.bundle_version().triple,
+                                    Some(vec![build_number]),
+                                )
+                            },
+                            |bundle_version_extra| {
+                                let extra = {
+                                    let mut extra = bundle_version_extra.clone();
+                                    extra.push(build_number);
+                                    extra
+                                };
+                                VersionNumber::new(config.bundle_version().triple, Some(extra))
+                            },
+                        )
+                    },
+                );
                 version_check()?;
                 ensure_init(config)?;
                 call_for_targets_with_fallback(
