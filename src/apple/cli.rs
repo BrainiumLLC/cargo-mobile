@@ -77,7 +77,7 @@ pub enum Command {
     },
     #[structopt(name = "archive", about = "Builds and archives for targets(s)")]
     Archive {
-        #[structopt(short = "b", long = "build-number")]
+        #[structopt(long = "build-number")]
         build_number: Option<Option<u32>>,
         #[structopt(name = "targets", default_value = Target::DEFAULT_KEY, possible_values = Target::name_list())]
         targets: Vec<String>,

@@ -192,14 +192,12 @@ impl Error {
 pub(crate) struct VersionInfo {
     pub version_number: Option<VersionNumber>,
     pub short_version_number: Option<VersionTriple>,
-    pub build_number: Option<u32>,
 }
 
 impl VersionInfo {
     pub(crate) fn from_raw(
         version_string: &Option<String>,
         short_version_string: &Option<String>,
-        build_number: Option<u32>,
     ) -> Result<Self, Error> {
         let version_number = version_string
             .as_ref()
@@ -218,15 +216,9 @@ impl VersionInfo {
                 return Err(Error::IosVersionNumberMismatch);
             }
         }
-        if let Some((version_number, build_number)) = version_number.as_ref().zip(build_number) {
-            if Some(vec![build_number]) != version_number.extra {
-                return Err(Error::IosVersionNumberMismatch);
-            }
-        }
         Ok(Self {
             version_number,
             short_version_number,
-            build_number,
         })
     }
 }
@@ -280,28 +272,19 @@ impl Config {
                 Ok(DEFAULT_PROJECT_DIR.to_owned())
             })?;
 
-        let (bundle_version, bundle_version_short) = VersionInfo::from_raw(
-            &raw.bundle_version,
-            &raw.bundle_version_short,
-            raw.build_number,
-        )
-        .map(|info| {
-            let bundle_version = info.version_number.clone().unwrap_or_else(|| {
-                if let Some((short_version, build_number)) =
-                    info.short_version_number.zip(info.build_number)
-                {
-                    VersionNumber::new(short_version, Some(vec![build_number]))
-                } else {
-                    DEFAULT_BUNDLE_VERSION
-                }
-            });
+        let (bundle_version, bundle_version_short) =
+            VersionInfo::from_raw(&raw.bundle_version, &raw.bundle_version_short).map(|info| {
+                let bundle_version = info
+                    .version_number
+                    .clone()
+                    .unwrap_or(DEFAULT_BUNDLE_VERSION);
 
-            let bundle_version_short = info
-                .short_version_number
-                .unwrap_or(VersionTriple::from_version_number(&bundle_version));
+                let bundle_version_short = info
+                    .short_version_number
+                    .unwrap_or(VersionTriple::from_version_number(&bundle_version));
 
-            (bundle_version, bundle_version_short)
-        })?;
+                (bundle_version, bundle_version_short)
+            })?;
 
         Ok(Self {
             app,
