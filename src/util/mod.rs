@@ -12,6 +12,7 @@ use crate::os::{self, command_path};
 use once_cell_regex::{exports::regex::Captures, exports::regex::Regex, regex};
 use serde::{ser::Serializer, Serialize};
 use std::{
+    error::Error as StdError,
     fmt::{self, Debug, Display},
     io::{self, Write},
     path::{Path, PathBuf},
@@ -308,6 +309,10 @@ impl VersionNumber {
                 Ok(Self { triple, extra })
             }
         }
+    }
+
+    pub fn as_string(&self) -> String {
+        format!("{}", self)
     }
 }
 
@@ -687,4 +692,46 @@ pub fn unwrap_either<T>(result: Result<T, T>) -> T {
     match result {
         Ok(t) | Err(t) => t,
     }
+}
+
+#[derive(Debug, Error)]
+pub enum WithCurrentDirError<E>
+where
+    E: StdError,
+{
+    #[error("Failed to get current directory: {source}")]
+    GetCurrentDirFailed { source: std::io::Error },
+    #[error("Failed to set working directory {path:?}: {source}")]
+    CurrentDirSetFailed {
+        path: std::path::PathBuf,
+        source: std::io::Error,
+    },
+    #[error(transparent)]
+    CallbackFailed(#[from] E),
+}
+
+pub fn with_working_dir<T, E>(
+    working_dir: impl AsRef<std::path::Path>,
+    f: impl FnOnce() -> Result<T, E>,
+) -> Result<T, WithCurrentDirError<E>>
+where
+    E: StdError,
+{
+    let working_dir = working_dir.as_ref();
+    let current_dir = std::env::current_dir()
+        .map_err(|source| WithCurrentDirError::GetCurrentDirFailed { source })?;
+    std::env::set_current_dir(working_dir).map_err(|source| {
+        WithCurrentDirError::CurrentDirSetFailed {
+            path: working_dir.clone().into(),
+            source,
+        }
+    })?;
+    let ret = f()?;
+    std::env::set_current_dir(&current_dir).map_err(|source| {
+        WithCurrentDirError::CurrentDirSetFailed {
+            path: current_dir.into(),
+            source,
+        }
+    })?;
+    Ok(ret)
 }
