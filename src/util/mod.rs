@@ -141,6 +141,10 @@ impl VersionTriple {
         }
     }
 
+    pub fn from_version_number(number: &VersionNumber) -> Self {
+        number.triple
+    }
+
     pub fn from_caps<'a>(caps: &'a Captures<'a>) -> Result<(Self, &'a str), VersionTripleError> {
         let version_str = &caps["version"];
         Ok((
@@ -242,8 +246,8 @@ pub enum VersionNumberError {
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct VersionNumber {
-    triple: VersionTriple,
-    extra: Option<Vec<u32>>,
+    pub triple: VersionTriple,
+    pub extra: Option<Vec<u32>>,
 }
 
 impl Display for VersionNumber {

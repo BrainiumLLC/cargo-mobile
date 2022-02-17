@@ -20,7 +20,7 @@ use crate::{
         cli::{
             self, Exec, GlobalFlags, Report, Reportable, TextWrapper, VERSION_LONG, VERSION_SHORT,
         },
-        prompt,
+        prompt, VersionNumber,
     },
 };
 use std::{collections::HashMap, ffi::OsStr, path::PathBuf};
@@ -77,6 +77,8 @@ pub enum Command {
     },
     #[structopt(name = "archive", about = "Builds and archives for targets(s)")]
     Archive {
+        #[structopt(short = "b", long = "build-number")]
+        build_number: Option<Option<u32>>,
         #[structopt(name = "targets", default_value = Target::DEFAULT_KEY, possible_values = Target::name_list())]
         targets: Vec<String>,
         #[structopt(flatten)]
@@ -305,8 +307,26 @@ impl Exec for Input {
             }),
             Command::Archive {
                 targets,
+                build_number,
                 profile: cli::Profile { profile },
             } => with_config(non_interactive, wrapper, |config, _| {
+                let build_number = build_number.flatten();
+                let app_version = if let Some(build_number) = build_number {
+                    if let Some(bundle_version_extra) = &config.bundle_version().extra {
+                        if !bundle_version_extra.is_empty() {
+                            panic!();
+                        } else {
+                            VersionNumber::new(
+                                config.bundle_version().triple,
+                                Some(vec![build_number]),
+                            )
+                        }
+                    } else {
+                        VersionNumber::new(config.bundle_version().triple, Some(vec![build_number]))
+                    }
+                } else {
+                    config.bundle_version().clone()
+                };
                 version_check()?;
                 ensure_init(config)?;
                 call_for_targets_with_fallback(

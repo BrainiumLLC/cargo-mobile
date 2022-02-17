@@ -16,7 +16,7 @@ use std::{
 };
 
 static DEFAULT_PROJECT_DIR: &str = "gen/apple";
-const DEFAULT_BUNDLE_VERSION: VersionTriple = VersionTriple::new(1, 0, 0);
+const DEFAULT_BUNDLE_VERSION: VersionNumber = VersionNumber::new(VersionTriple::new(1, 0, 0), None);
 const DEFAULT_IOS_VERSION: VersionDouble = VersionDouble::new(9, 0);
 const DEFAULT_MACOS_VERSION: VersionDouble = VersionDouble::new(11, 0);
 
@@ -142,9 +142,10 @@ pub enum Error {
     DevelopmentTeamEmpty,
     ProjectDirInvalid(ProjectDirInvalid),
     BundleVersionInvalid(VersionTripleError),
-    BundleVersionLongInvalid(VersionNumberError),
     IosVersionInvalid(VersionDoubleError),
     MacOsVersionInvalid(VersionDoubleError),
+    IosVersionNumberError(VersionNumberError),
+    IosVersionNumberMismatch,
 }
 
 impl Error {
@@ -173,11 +174,60 @@ impl Error {
                 msg,
                 format!("`{}.macos-version` invalid: {}", super::NAME, err),
             ),
-            Self::BundleVersionLongInvalid(err) => Report::error(
+            Self::IosVersionNumberError(err) => Report::error(
                 msg,
-                format!("`{}.macos-version` invalid: {}", super::NAME, err), // TODO: !
+                format!("`{}.app-version` invalid: {}", super::NAME, err),
+            ),
+            Self::IosVersionNumberMismatch => Report::error(
+                msg,
+                format!(
+                    "`{}.app-version` short and long version number don't match",
+                    super::NAME
+                ),
             ),
         }
+    }
+}
+
+pub(crate) struct VersionInfo {
+    pub version_number: Option<VersionNumber>,
+    pub short_version_number: Option<VersionTriple>,
+    pub build_number: Option<u32>,
+}
+
+impl VersionInfo {
+    pub(crate) fn from_raw(
+        version_string: &Option<String>,
+        short_version_string: &Option<String>,
+        build_number: Option<u32>,
+    ) -> Result<Self, Error> {
+        let version_number = version_string
+            .as_ref()
+            .map(|bundle_string| VersionNumber::from_str(&bundle_string))
+            .transpose()
+            .map_err(Error::IosVersionNumberError)?;
+        let short_version_number = short_version_string
+            .as_ref()
+            .map(|version_string| VersionTriple::from_str(&version_string))
+            .transpose()
+            .map_err(Error::BundleVersionInvalid)?;
+        if let Some((version_number, short_version_number)) =
+            version_number.as_ref().zip(short_version_number)
+        {
+            if version_number.triple != short_version_number {
+                return Err(Error::IosVersionNumberMismatch);
+            }
+        }
+        if let Some((version_number, build_number)) = version_number.as_ref().zip(build_number) {
+            if Some(vec![build_number]) != version_number.extra {
+                return Err(Error::IosVersionNumberMismatch);
+            }
+        }
+        Ok(Self {
+            version_number,
+            short_version_number,
+            build_number,
+        })
     }
 }
 
@@ -188,7 +238,6 @@ pub struct Config {
     app: App,
     development_team: String,
     project_dir: String,
-    // TODO: Allow support for [3, inf) integers
     bundle_version: VersionNumber,
     bundle_version_short: VersionTriple,
     ios_version: VersionDouble,
@@ -231,23 +280,34 @@ impl Config {
                 Ok(DEFAULT_PROJECT_DIR.to_owned())
             })?;
 
-        let bundle_version_short = raw
-            .bundle_version_short
-            .map(|str| VersionTriple::from_str(&str))
-            .transpose()
-            .map_err(Error::BundleVersionInvalid)?
-            .unwrap_or(DEFAULT_BUNDLE_VERSION);
+        let (bundle_version, bundle_version_short) = VersionInfo::from_raw(
+            &raw.bundle_version,
+            &raw.bundle_version_short,
+            raw.build_number,
+        )
+        .map(|info| {
+            let bundle_version = info.version_number.clone().unwrap_or_else(|| {
+                if let Some((short_version, build_number)) =
+                    info.short_version_number.zip(info.build_number)
+                {
+                    VersionNumber::new(short_version, Some(vec![build_number]))
+                } else {
+                    DEFAULT_BUNDLE_VERSION
+                }
+            });
+
+            let bundle_version_short = info
+                .short_version_number
+                .unwrap_or(VersionTriple::from_version_number(&bundle_version));
+
+            (bundle_version, bundle_version_short)
+        })?;
 
         Ok(Self {
             app,
             development_team: raw.development_team,
             project_dir,
-            bundle_version: raw
-                .bundle_version
-                .map(|str| VersionNumber::from_str(&str))
-                .transpose()
-                .map_err(Error::BundleVersionLongInvalid)?
-                .unwrap_or(VersionNumber::new_from_triple(bundle_version_short)),
+            bundle_version,
             bundle_version_short,
             ios_version: raw
                 .ios_version
@@ -327,5 +387,9 @@ impl Config {
 
     pub fn scheme(&self) -> String {
         format!("{}_iOS", self.app.name())
+    }
+
+    pub fn bundle_version(&self) -> &VersionNumber {
+        &self.bundle_version
     }
 }

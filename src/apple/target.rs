@@ -8,7 +8,7 @@ use crate::{
     target::TargetTrait,
     util::{
         cli::{Report, Reportable},
-        CargoCommand,
+        CargoCommand, VersionNumber,
     },
 };
 use once_cell_regex::exports::once_cell::sync::OnceCell;
