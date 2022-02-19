@@ -6,16 +6,20 @@ use super::{
 };
 use crate::{
     dot_cargo,
+    os::{self, replace_path_separator},
     target::TargetTrait as _,
     templating::{self, Pack},
     util::{
         self,
         cli::{Report, Reportable, TextWrapper},
-        ln,
+        ln, prefix_path,
     },
 };
 use path_abs::PathOps;
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 pub static TEMPLATE_PACK: &str = "android-studio";
 pub static ASSET_PACK_TEMPLATE_PACK: &str = "android-studio-asset-pack";
@@ -93,7 +97,10 @@ pub fn gen(
         |map| {
             map.insert(
                 "root-dir-rel",
-                util::relativize_path(config.app().root_dir(), config.project_dir()),
+                Path::new(&replace_path_separator(
+                    util::relativize_path(config.app().root_dir(), config.project_dir())
+                        .into_os_string(),
+                )),
             );
             map.insert("root-dir", config.app().root_dir());
             map.insert("targets", Target::all().values().collect::<Vec<_>>());
@@ -128,6 +135,7 @@ pub fn gen(
                     .map(|p| p.name.as_str())
                     .collect::<Vec<_>>(),
             );
+            map.insert("windows", cfg!(windows));
         },
         filter.fun(),
     )
@@ -170,12 +178,12 @@ pub fn gen(
         })?;
     }
 
-    let dest = dest.join("app/src/main/assets/");
+    let dest = prefix_path(dest, "app/src/main/");
     fs::create_dir_all(&dest).map_err(|cause| Error::DirectoryCreationFailed {
         path: dest.clone(),
         cause,
     })?;
-    ln::force_symlink_relative(config.app().asset_dir(), dest, ln::TargetStyle::Directory)
+    os::ln::force_symlink_relative(config.app().asset_dir(), dest, ln::TargetStyle::Directory)
         .map_err(Error::AssetDirSymlinkFailed)?;
 
     {
