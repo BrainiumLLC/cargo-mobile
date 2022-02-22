@@ -280,6 +280,20 @@ impl VersionNumber {
         }
     }
 
+    pub fn from_other_and_number(other: &VersionNumber, number: u32) -> Self {
+        other.extra.as_ref().map_or_else(
+            || VersionNumber::new(other.triple, Some(vec![number])),
+            |bundle_version_extra| {
+                let extra = {
+                    let mut extras = bundle_version_extra.clone();
+                    extras.push(number);
+                    extras
+                };
+                VersionNumber::new(other.triple, Some(extra))
+            },
+        )
+    }
+
     pub const fn new(triple: VersionTriple, extra: Option<Vec<u32>>) -> Self {
         Self { triple, extra }
     }
