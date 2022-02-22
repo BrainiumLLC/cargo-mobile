@@ -96,21 +96,17 @@ impl Reportable for BuildError {
 
 #[derive(Debug)]
 pub enum ArchiveError {
-    SetVersionFailed {
-        cause: WithWorkingDirError<bossy::Error>,
-    },
-    ArchiveFailed {
-        cause: bossy::Error,
-    },
+    SetVersionFailed(WithWorkingDirError<bossy::Error>),
+    ArchiveFailed(bossy::Error),
 }
 
 impl Reportable for ArchiveError {
     fn report(&self) -> Report {
         match self {
-            Self::SetVersionFailed { cause } => {
+            Self::SetVersionFailed(cause) => {
                 Report::error("Failed to set app version number", cause)
             }
-            Self::ArchiveFailed { cause } => {
+            Self::ArchiveFailed(cause) => {
                 Report::error("Failed to archive via `xcodebuild`", cause)
             }
         }
@@ -319,7 +315,7 @@ impl<'a> Target<'a> {
                     .with_args(["-all", &build_number.to_string()])
                     .run_and_wait()?)
             })
-            .map_err(|cause| ArchiveError::SetVersionFailed { cause })?;
+            .map_err(|cause| ArchiveError::SetVersionFailed(cause))?;
         }
         let configuration = profile.as_str();
         let archive_path = config.archive_dir().join(&config.scheme());
@@ -337,7 +333,7 @@ impl<'a> Target<'a> {
             .with_arg("-archivePath")
             .with_arg(&archive_path)
             .run_and_wait()
-            .map_err(|cause| ArchiveError::ArchiveFailed { cause })?;
+            .map_err(|cause| ArchiveError::ArchiveFailed(cause))?;
         Ok(())
     }
 
