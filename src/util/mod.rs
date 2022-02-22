@@ -310,10 +310,6 @@ impl VersionNumber {
             }
         }
     }
-
-    pub fn as_string(&self) -> String {
-        format!("{}", self)
-    }
 }
 
 #[derive(Debug, Error)]
@@ -699,8 +695,8 @@ pub enum WithWorkingDirError<E>
 where
     E: StdError,
 {
-    #[error("Failed to get current directory: {source}")]
-    GetCurrentDirFailed { source: std::io::Error },
+    #[error("Failed to get current directory: {0}")]
+    CurrentDirGetFailed(#[source] std::io::Error),
     #[error("Failed to set working directory {path:?}: {source}")]
     CurrentDirSetFailed {
         path: PathBuf,
@@ -718,11 +714,10 @@ where
     E: StdError,
 {
     let working_dir = working_dir.as_ref();
-    let current_dir = std::env::current_dir()
-        .map_err(|source| WithWorkingDirError::GetCurrentDirFailed { source })?;
+    let current_dir = std::env::current_dir().map_err(WithWorkingDirError::CurrentDirGetFailed)?;
     std::env::set_current_dir(working_dir).map_err(|source| {
         WithWorkingDirError::CurrentDirSetFailed {
-            path: working_dir.clone().into(),
+            path: working_dir.to_owned(),
             source,
         }
     })?;

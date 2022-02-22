@@ -78,7 +78,7 @@ pub enum Command {
     #[structopt(name = "archive", about = "Builds and archives for targets(s)")]
     Archive {
         #[structopt(long = "build-number")]
-        build_number: Option<Option<u32>>,
+        build_number: Option<u32>,
         #[structopt(name = "targets", default_value = Target::DEFAULT_KEY, possible_values = Target::name_list())]
         targets: Vec<String>,
         #[structopt(flatten)]
@@ -310,7 +310,6 @@ impl Exec for Input {
                 build_number,
                 profile: cli::Profile { profile },
             } => with_config(non_interactive, wrapper, |config, _| {
-                let build_number = build_number.flatten();
                 version_check()?;
                 ensure_init(config)?;
                 call_for_targets_with_fallback(
