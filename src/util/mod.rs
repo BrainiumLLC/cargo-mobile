@@ -237,7 +237,7 @@ impl VersionTriple {
 #[derive(Debug, Error)]
 pub enum VersionNumberError {
     #[error("Failed to parse extra version version from {version:?}: {source}")]
-    ExtraVersionINvalid {
+    ExtraVersionInvalid {
         version: String,
         source: std::num::ParseIntError,
     },
@@ -299,7 +299,7 @@ impl VersionNumber {
                 let extra = Some(
                     s.map(|s| {
                         s.parse()
-                            .map_err(|source| VersionNumberError::ExtraVersionINvalid {
+                            .map_err(|source| VersionNumberError::ExtraVersionInvalid {
                                 version: v.to_owned(),
                                 source,
                             })
