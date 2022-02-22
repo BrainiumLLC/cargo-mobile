@@ -695,7 +695,7 @@ pub fn unwrap_either<T>(result: Result<T, T>) -> T {
 }
 
 #[derive(Debug, Error)]
-pub enum WithCurrentDirError<E>
+pub enum WithWorkingDirError<E>
 where
     E: StdError,
 {
@@ -713,22 +713,22 @@ where
 pub fn with_working_dir<T, E>(
     working_dir: impl AsRef<std::path::Path>,
     f: impl FnOnce() -> Result<T, E>,
-) -> Result<T, WithCurrentDirError<E>>
+) -> Result<T, WithWorkingDirError<E>>
 where
     E: StdError,
 {
     let working_dir = working_dir.as_ref();
     let current_dir = std::env::current_dir()
-        .map_err(|source| WithCurrentDirError::GetCurrentDirFailed { source })?;
+        .map_err(|source| WithWorkingDirError::GetCurrentDirFailed { source })?;
     std::env::set_current_dir(working_dir).map_err(|source| {
-        WithCurrentDirError::CurrentDirSetFailed {
+        WithWorkingDirError::CurrentDirSetFailed {
             path: working_dir.clone().into(),
             source,
         }
     })?;
     let result = f()?;
     std::env::set_current_dir(&current_dir).map_err(|source| {
-        WithCurrentDirError::CurrentDirSetFailed {
+        WithWorkingDirError::CurrentDirSetFailed {
             path: current_dir.into(),
             source,
         }

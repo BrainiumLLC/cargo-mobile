@@ -9,7 +9,7 @@ use crate::{
     util::{
         self,
         cli::{Report, Reportable},
-        CargoCommand, VersionNumber, WithCurrentDirError,
+        CargoCommand, VersionNumber, WithWorkingDirError,
     },
 };
 use once_cell_regex::exports::once_cell::sync::OnceCell;
@@ -97,7 +97,7 @@ impl Reportable for BuildError {
 #[derive(Debug)]
 pub enum ArchiveError {
     SetVersionFailed {
-        cause: WithCurrentDirError<bossy::Error>,
+        cause: WithWorkingDirError<bossy::Error>,
     },
     ArchiveFailed {
         cause: bossy::Error,
