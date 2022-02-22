@@ -314,7 +314,7 @@ impl<'a> Target<'a> {
     ) -> Result<(), ArchiveError> {
         if let Some(build_number) = build_number {
             util::with_working_dir(config.project_dir(), || {
-                Ok(bossy::Command::pure("xcrun")
+                Ok(bossy::Command::impure("xcrun")
                     .with_args(["agvtool", "new-version"])
                     .with_args(["-all", &build_number.to_string()])
                     .run_and_wait()?)
