@@ -189,7 +189,7 @@ impl Error {
             Self::InvalidVersionConfiguration => Report::error(
                 msg,
                 format!(
-                    "`{}.app-version` bundle-version-short cannot be specified without bundle-version",
+                    "`{}.app-version` `bundle-version-short` cannot be specified without also specifying `bundle-version`",
                     super::NAME
                 ),
             ),
