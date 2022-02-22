@@ -703,7 +703,7 @@ where
     GetCurrentDirFailed { source: std::io::Error },
     #[error("Failed to set working directory {path:?}: {source}")]
     CurrentDirSetFailed {
-        path: std::path::PathBuf,
+        path: PathBuf,
         source: std::io::Error,
     },
     #[error(transparent)]
@@ -711,7 +711,7 @@ where
 }
 
 pub fn with_working_dir<T, E>(
-    working_dir: impl AsRef<std::path::Path>,
+    working_dir: impl AsRef<Path>,
     f: impl FnOnce() -> Result<T, E>,
 ) -> Result<T, WithWorkingDirError<E>>
 where
