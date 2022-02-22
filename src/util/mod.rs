@@ -726,12 +726,12 @@ where
             source,
         }
     })?;
-    let ret = f()?;
+    let result = f()?;
     std::env::set_current_dir(&current_dir).map_err(|source| {
         WithCurrentDirError::CurrentDirSetFailed {
             path: current_dir.into(),
             source,
         }
     })?;
-    Ok(ret)
+    Ok(result)
 }
