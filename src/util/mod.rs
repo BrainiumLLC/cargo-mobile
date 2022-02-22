@@ -236,7 +236,7 @@ impl VersionTriple {
 
 #[derive(Debug, Error)]
 pub enum VersionNumberError {
-    #[error("Failed to parse extra version version from {version:?}: {source}")]
+    #[error("Failed to parse extra version from {version:?}: {source}")]
     ExtraVersionInvalid {
         version: String,
         source: std::num::ParseIntError,
