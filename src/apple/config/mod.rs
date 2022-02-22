@@ -144,7 +144,7 @@ pub enum Error {
     BundleVersionInvalid(VersionTripleError),
     IosVersionInvalid(VersionDoubleError),
     MacOsVersionInvalid(VersionDoubleError),
-    IosVersionNumberError(VersionNumberError),
+    IosVersionNumberInvalid(VersionNumberError),
     IosVersionNumberMismatch,
     InvalidVersionConfiguration,
 }
@@ -175,7 +175,7 @@ impl Error {
                 msg,
                 format!("`{}.macos-version` invalid: {}", super::NAME, err),
             ),
-            Self::IosVersionNumberError(err) => Report::error(
+            Self::IosVersionNumberInvalid(err) => Report::error(
                 msg,
                 format!("`{}.app-version` invalid: {}", super::NAME, err),
             ),
@@ -212,7 +212,7 @@ impl VersionInfo {
             .as_ref()
             .map(|bundle_string| VersionNumber::from_str(&bundle_string))
             .transpose()
-            .map_err(Error::IosVersionNumberError)?;
+            .map_err(Error::IosVersionNumberInvalid)?;
         let short_version_number = short_version_string
             .as_ref()
             .map(|version_string| VersionTriple::from_str(&version_string))
