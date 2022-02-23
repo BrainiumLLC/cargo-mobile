@@ -89,7 +89,10 @@ mod test {
     fn test_adb_output_regex(input: &str, devices: Vec<&'static str>) {
         let regex = regex_multi_line!(ADB_DEVICE_REGEX);
         println!("{}", input);
-        let captures: Vec<&str> = regex.captures_iter(input).map(|x| x.get(1).unwrap().as_str()).collect();
+        let captures: Vec<&str> = regex
+            .captures_iter(input)
+            .map(|x| x.get(1).unwrap().as_str())
+            .collect();
         assert_eq!(captures, devices.iter().map(|x| *x).collect::<Vec<&str>>());
     }
 }
