@@ -727,12 +727,13 @@ where
     CallbackFailed(#[from] E),
 }
 
-pub fn with_working_dir<T, E>(
+pub fn with_working_dir<T, E, IE>(
     working_dir: impl AsRef<Path>,
-    f: impl FnOnce() -> Result<T, E>,
+    f: impl FnOnce() -> Result<T, IE>,
 ) -> Result<T, WithWorkingDirError<E>>
 where
     E: StdError,
+    IE: Into<E>,
 {
     let working_dir = working_dir.as_ref();
     let current_dir = std::env::current_dir().map_err(WithWorkingDirError::CurrentDirGetFailed)?;
@@ -742,7 +743,7 @@ where
             source,
         }
     })?;
-    let result = f()?;
+    let result = f().map_err(|source| WithWorkingDirError::CallbackFailed(source.into()))?;
     std::env::set_current_dir(&current_dir).map_err(|source| {
         WithWorkingDirError::CurrentDirSetFailed {
             path: current_dir.into(),
