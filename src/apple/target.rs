@@ -310,11 +310,9 @@ impl<'a> Target<'a> {
     ) -> Result<(), ArchiveError> {
         if let Some(build_number) = build_number {
             util::with_working_dir(config.project_dir(), || {
-                Ok(
-                    bossy::Command::impure_parse("xcrun agvtool new-version -all")
-                        .with_arg(&build_number.to_string())
-                        .run_and_wait()?,
-                )
+                Ok(bossy::Command::pure_parse("xcrun agvtool new-version -all")
+                    .with_arg(&build_number.to_string())
+                    .run_and_wait()?)
             })
             .map_err(|cause| ArchiveError::SetVersionFailed(cause))?;
         }
