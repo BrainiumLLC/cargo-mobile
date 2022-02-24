@@ -337,9 +337,8 @@ impl Config {
                     .clone()
                     .unwrap_or(DEFAULT_BUNDLE_VERSION);
 
-                let bundle_version_short = info
-                    .short_version_number
-                    .unwrap_or(VersionTriple::from_version_number(&bundle_version));
+                let bundle_version_short =
+                    info.short_version_number.unwrap_or(bundle_version.triple);
 
                 (bundle_version, bundle_version_short)
             })?;

@@ -8,8 +8,6 @@ pub mod prompt;
 pub use self::{cargo::*, git::*, path::*};
 
 use self::cli::{Report, Reportable};
-#[cfg(target_os = "macos")]
-use crate::apple::version_number::VersionNumber;
 use crate::os::{self, command_path};
 use once_cell_regex::{exports::regex::Captures, exports::regex::Regex, regex};
 use serde::{ser::Serializer, Deserialize, Serialize};
@@ -142,11 +140,6 @@ impl VersionTriple {
             minor,
             patch,
         }
-    }
-
-    #[cfg(target_os = "macos")]
-    pub fn from_version_number(number: &VersionNumber) -> Self {
-        number.triple
     }
 
     pub fn from_caps<'a>(caps: &'a Captures<'a>) -> Result<(Self, &'a str), VersionTripleError> {
