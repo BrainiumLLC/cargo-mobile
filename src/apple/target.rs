@@ -1,6 +1,7 @@
 use super::{
     config::{Config, Metadata},
     system_profile::{self, DeveloperTools},
+    version_number::VersionNumber,
 };
 use crate::{
     env::{Env, ExplicitEnv as _},
@@ -9,7 +10,7 @@ use crate::{
     util::{
         self,
         cli::{Report, Reportable},
-        CargoCommand, VersionNumber, WithWorkingDirError,
+        CargoCommand, WithWorkingDirError,
     },
 };
 use once_cell_regex::exports::once_cell::sync::OnceCell;

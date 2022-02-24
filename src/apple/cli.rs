@@ -4,6 +4,7 @@ use crate::{
         device::{Device, RunError},
         ios_deploy, rust_version_check,
         target::{ArchiveError, BuildError, CheckError, CompileLibError, ExportError, Target},
+        version_number::VersionNumber,
         NAME,
     },
     config::{
@@ -20,7 +21,7 @@ use crate::{
         cli::{
             self, Exec, GlobalFlags, Report, Reportable, TextWrapper, VERSION_LONG, VERSION_SHORT,
         },
-        prompt, VersionNumber,
+        prompt,
     },
 };
 use std::{collections::HashMap, ffi::OsStr, path::PathBuf};

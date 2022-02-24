@@ -2,11 +2,12 @@ mod raw;
 
 pub use self::raw::*;
 
+use super::version_number::{VersionNumber, VersionNumberError};
 use crate::{
     config::app::App,
     util::{
-        self, cli::Report, Pod, VersionDouble, VersionDoubleError, VersionNumber,
-        VersionNumberError, VersionTriple, VersionTripleError,
+        self, cli::Report, Pod, VersionDouble, VersionDoubleError, VersionTriple,
+        VersionTripleError,
     },
 };
 use serde::{Deserialize, Serialize};
