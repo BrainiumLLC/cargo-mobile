@@ -315,7 +315,7 @@ impl<'a> Target<'a> {
                     .with_arg(&build_number.to_string())
                     .run_and_wait()
             })
-            .map_err(|cause| ArchiveError::SetVersionFailed(cause))?;
+            .map_err(ArchiveError::SetVersionFailed)?;
         }
         let configuration = profile.as_str();
         let archive_path = config.archive_dir().join(&config.scheme());
@@ -333,7 +333,7 @@ impl<'a> Target<'a> {
             .with_arg("-archivePath")
             .with_arg(&archive_path)
             .run_and_wait()
-            .map_err(|cause| ArchiveError::ArchiveFailed(cause))?;
+            .map_err(ArchiveError::ArchiveFailed)?;
         Ok(())
     }
 
