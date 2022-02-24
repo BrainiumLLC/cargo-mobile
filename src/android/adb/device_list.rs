@@ -34,7 +34,7 @@ impl Reportable for Error {
     }
 }
 
-const ADB_DEVICE_REGEX: &'static str = r"^([\S]{6,22})	\bdevice";
+const ADB_DEVICE_REGEX: &str = r"^([\S]{6,22})	device\b";
 
 pub fn device_list(env: &Env) -> Result<BTreeSet<Device<'static>>, Error> {
     super::check_authorized(
@@ -92,7 +92,7 @@ mod test {
         let captures: Vec<&str> = regex
             .captures_iter(input)
             .map(|x| x.get(1).unwrap().as_str())
-            .collect();
-        assert_eq!(captures, devices.iter().map(|x| *x).collect::<Vec<&str>>());
+            .collect::<Vec<_>>();
+        assert_eq!(captures, devices);
     }
 }
