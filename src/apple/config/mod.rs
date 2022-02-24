@@ -254,13 +254,13 @@ impl VersionInfo {
         short_version_string: &Option<String>,
     ) -> Result<Self, Error> {
         let version_number = version_string
-            .as_ref()
-            .map(|bundle_string| VersionNumber::from_str(&bundle_string))
+            .as_deref()
+            .map(VersionNumber::from_str)
             .transpose()
             .map_err(Error::IosVersionNumberInvalid)?;
         let short_version_number = short_version_string
-            .as_ref()
-            .map(|version_string| VersionTriple::from_str(&version_string))
+            .as_deref()
+            .map(VersionTriple::from_str)
             .transpose()
             .map_err(Error::BundleVersionInvalid)?;
         if short_version_number.is_some() && version_number.is_none() {
