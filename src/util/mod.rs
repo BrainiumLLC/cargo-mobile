@@ -637,7 +637,7 @@ pub fn with_working_dir<T, E, IE>(
 ) -> Result<T, WithWorkingDirError<E>>
 where
     E: StdError,
-    IE: Into<E>,
+    E: From<IE>,
 {
     let working_dir = working_dir.as_ref();
     let current_dir = std::env::current_dir().map_err(WithWorkingDirError::CurrentDirGetFailed)?;
@@ -647,7 +647,7 @@ where
             source,
         }
     })?;
-    let result = f().map_err(|source| WithWorkingDirError::CallbackFailed(source.into()))?;
+    let result = f().map_err(E::from)?;
     std::env::set_current_dir(&current_dir).map_err(|source| {
         WithWorkingDirError::CurrentDirSetFailed {
             path: current_dir.into(),
