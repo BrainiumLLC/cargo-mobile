@@ -104,12 +104,8 @@ pub enum ArchiveError {
 impl Reportable for ArchiveError {
     fn report(&self) -> Report {
         match self {
-            Self::SetVersionFailed(cause) => {
-                Report::error("Failed to set app version number", cause)
-            }
-            Self::ArchiveFailed(cause) => {
-                Report::error("Failed to archive via `xcodebuild`", cause)
-            }
+            Self::SetVersionFailed(err) => Report::error("Failed to set app version number", err),
+            Self::ArchiveFailed(err) => Report::error("Failed to archive via `xcodebuild`", err),
         }
     }
 }
