@@ -111,9 +111,7 @@ impl Platform {
     }
 
     pub fn command_line_arguments(&self) -> &[String] {
-        self.command_line_arguments
-            .as_deref()
-            .unwrap_or_else(|| &[])
+        self.command_line_arguments.as_deref().unwrap_or_default()
     }
 }
 
