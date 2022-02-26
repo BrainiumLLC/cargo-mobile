@@ -322,7 +322,7 @@ impl Exec for Input {
                             || config.bundle_version().clone(),
                             |build_number| {
                                 VersionNumber::from_other_and_number(
-                                    config.bundle_version(),
+                                    config.bundle_version().clone(),
                                     build_number,
                                 )
                             },
