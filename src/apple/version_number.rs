@@ -49,16 +49,11 @@ impl VersionNumber {
         }
     }
 
-    pub fn from_other_and_number(other: VersionNumber, number: u32) -> Self {
-        Self {
-            triple: other.triple,
-            extra: Some(other.extra.map_or_else(
-                || vec![number],
-                |mut extra| {
-                    extra.push(number);
-                    extra
-                },
-            )),
+    pub fn push_extra(&mut self, number: u32) {
+        if let Some(extra) = &mut self.extra {
+            extra.push(number);
+        } else {
+            self.extra = Some(vec![number]);
         }
     }
 

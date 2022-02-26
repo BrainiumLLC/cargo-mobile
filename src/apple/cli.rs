@@ -321,10 +321,9 @@ impl Exec for Input {
                         let app_version = build_number.map_or_else(
                             || config.bundle_version().clone(),
                             |build_number| {
-                                VersionNumber::from_other_and_number(
-                                    config.bundle_version().clone(),
-                                    build_number,
-                                )
+                                let mut version = config.bundle_version().clone();
+                                version.push_extra(build_number);
+                                version
                             },
                         );
 
