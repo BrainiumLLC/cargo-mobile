@@ -5,13 +5,13 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum VersionNumberError {
+    #[error("Failed to parse version triple.")]
+    VersionTripleInvalid(#[from] VersionTripleError),
     #[error("Failed to parse extra version from {version:?}: {source}")]
     ExtraVersionInvalid {
         version: String,
         source: std::num::ParseIntError,
     },
-    #[error("Failed to parse version triple.")]
-    VersionTriplerError(#[from] VersionTripleError),
 }
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -87,7 +87,7 @@ impl VersionNumber {
                                 source,
                             })
                     })
-                    .collect::<Result<Vec<u32>, _>>()?,
+                    .collect::<Result<Vec<_>, _>>()?,
                 );
                 Ok(Self { triple, extra })
             }
