@@ -91,7 +91,7 @@ targets:
       {{~#each ios-frameworks}}
       - sdk: {{this}}.framework{{/each}}
     preBuildScripts:
-      - script: ${HOME}/.cargo/bin/cargo-apple xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}
+      - script: ${HOME}/.cargo/bin/cargo-apple xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths "${FRAMEWORK_SEARCH_PATHS:?}" --header-search-paths "${HEADER_SEARCH_PATHS:?}" --gcc-preprocessor-definitions "${GCC_PREPROCESSOR_DEFINITIONS:?}" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}
         name: Build Rust Code
         outputFiles:
           - $(SRCROOT)/target/aarch64-apple-ios/${CONFIGURATION}/deps/lib{{snake-case app.name}}.a
@@ -190,7 +190,7 @@ targets:
       {{~#each macos-frameworks}}
       - sdk: {{this}}.framework{{/each}}
     preBuildScripts:
-      - script: ${HOME}/.cargo/bin/cargo-apple xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}
+      - script: ${HOME}/.cargo/bin/cargo-apple xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths "${FRAMEWORK_SEARCH_PATHS:?}" --header-search-paths "${HEADER_SEARCH_PATHS:?}" --gcc-preprocessor-definitions "${GCC_PREPROCESSOR_DEFINITIONS:?}" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}
         name: Build Rust Code
         outputFiles:
           - $(SRCROOT)/target/x86_64-apple-darwin/${CONFIGURATION}/deps/lib{{snake-case app.name}}.a
