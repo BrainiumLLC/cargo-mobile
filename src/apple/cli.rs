@@ -4,7 +4,6 @@ use crate::{
         device::{Device, RunError},
         ios_deploy, rust_version_check,
         target::{ArchiveError, BuildError, CheckError, CompileLibError, ExportError, Target},
-        version_number::VersionNumber,
         NAME,
     },
     config::{
@@ -318,14 +317,10 @@ impl Exec for Input {
                     &detect_target_ok,
                     &env,
                     |target: &Target| {
-                        let app_version = build_number.map_or_else(
-                            || config.bundle_version().clone(),
-                            |build_number| {
-                                let mut version = config.bundle_version().clone();
-                                version.push_extra(build_number);
-                                version
-                            },
-                        );
+                        let mut app_version = config.bundle_version().clone();
+                        if let Some(build_number) = build_number {
+                            app_version.push_extra(build_number);
+                        }
 
                         target
                             .build(config, &env, noise_level, profile)

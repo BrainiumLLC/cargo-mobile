@@ -49,14 +49,6 @@ impl VersionNumber {
         }
     }
 
-    pub fn push_extra(&mut self, number: u32) {
-        if let Some(extra) = &mut self.extra {
-            extra.push(number);
-        } else {
-            self.extra = Some(vec![number]);
-        }
-    }
-
     pub const fn new(triple: VersionTriple, extra: Option<Vec<u32>>) -> Self {
         Self { triple, extra }
     }
@@ -70,6 +62,8 @@ impl VersionNumber {
                     extra: None,
                 })
             }
+            // Even when splitting a string that does not contain the delimeter, we should always get at least 1 split
+            // (the full string, which could be the empty string)
             0 => unreachable!(),
             _ => {
                 let mut s = v.split(".");
@@ -87,5 +81,9 @@ impl VersionNumber {
                 Ok(Self { triple, extra })
             }
         }
+    }
+
+    pub fn push_extra(&mut self, number: u32) {
+        self.extra.get_or_insert_with(Default::default).push(number);
     }
 }
