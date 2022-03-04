@@ -3,8 +3,8 @@ use crate::{
     util::{cli::TextWrapper, prompt},
 };
 use colored::{Color, Colorize as _};
-use serde::{Deserialize, Serialize};
-use std::fmt::{self, Display};
+use serde::{ser::Serializer, Deserialize, Serialize};
+use std::fmt::{self, Debug, Display};
 
 #[derive(Debug)]
 pub enum DetectError {
@@ -42,10 +42,44 @@ impl Display for PromptError {
     }
 }
 
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(untagged)]
+pub enum OneOrMany<T: Debug> {
+    One(T),
+    Many(Vec<T>),
+}
+
+impl<T: Debug> From<OneOrMany<T>> for Vec<T> {
+    fn from(from: OneOrMany<T>) -> Self {
+        match from {
+            OneOrMany::One(val) => vec![val],
+            OneOrMany::Many(vec) => vec,
+        }
+    }
+}
+
+impl<T: Debug> Display for OneOrMany<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::One(one) => write!(f, "{:?}", one),
+            Self::Many(vec) => write!(f, "{:?}", vec),
+        }
+    }
+}
+
+impl<T: Debug> Serialize for OneOrMany<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.collect_str(self)
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PListPair {
     key: String,
-    value: String,
+    value: OneOrMany<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
