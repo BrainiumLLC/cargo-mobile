@@ -1,6 +1,6 @@
 use crate::{
     apple::teams,
-    util::{cli::TextWrapper, prompt},
+    util::{cli::TextWrapper, prompt, OneOrMany},
 };
 use colored::{Color, Colorize as _};
 use serde::{ser::Serializer, Deserialize, Serialize};
@@ -39,40 +39,6 @@ impl Display for PromptError {
                 write!(f, "Failed to prompt for Apple developer team: {}", err)
             }
         }
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq)]
-#[serde(untagged)]
-pub enum OneOrMany<T: Debug> {
-    One(T),
-    Many(Vec<T>),
-}
-
-impl<T: Debug> From<OneOrMany<T>> for Vec<T> {
-    fn from(from: OneOrMany<T>) -> Self {
-        match from {
-            OneOrMany::One(val) => vec![val],
-            OneOrMany::Many(vec) => vec,
-        }
-    }
-}
-
-impl<T: Debug> Display for OneOrMany<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::One(one) => write!(f, "{:?}", one),
-            Self::Many(vec) => write!(f, "{:?}", vec),
-        }
-    }
-}
-
-impl<T: Debug> Serialize for OneOrMany<T> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.collect_str(self)
     }
 }
 
