@@ -3,7 +3,7 @@ use crate::{
     util::{cli::TextWrapper, prompt, OneOrMany},
 };
 use colored::{Color, Colorize as _};
-use serde::{ser::Serializer, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::fmt::{self, Debug, Display};
 
 #[derive(Debug)]
