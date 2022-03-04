@@ -673,20 +673,15 @@ impl<T: Debug> From<OneOrMany<T>> for Vec<T> {
     }
 }
 
-impl<T: Debug> Display for OneOrMany<T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::One(one) => write!(f, "{:?}", one),
-            Self::Many(vec) => write!(f, "{:?}", vec),
-        }
-    }
-}
-
 impl<T: Debug> Serialize for OneOrMany<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        serializer.collect_str(self)
+        let serialized_str = match self {
+            Self::One(one) => format!("{:?}", one),
+            Self::Many(vec) => format!("{:?}", vec),
+        };
+        serializer.serialize_str(&serialized_str)
     }
 }
