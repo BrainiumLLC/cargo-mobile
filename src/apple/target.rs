@@ -261,13 +261,16 @@ impl<'a> Target<'a> {
     ) -> Result<(), CompileLibError> {
         // Force color when running from CLI
         let color = if force_color.yes() { "always" } else { "auto" };
-        self.cargo(config, metadata, "build")
+        self.cargo(config, metadata, "rustc")
             .map_err(CompileLibError::VersionCheckFailed)?
             .with_verbose(noise_level.pedantic())
             .with_release(profile.release())
             .into_command_pure(env)
             .with_env_vars(cc_env)
             .with_args(&["--color", color])
+            .with_arg("--crate-type=staticlib")
+            .with_arg("--lib")
+            .with_args(["-Z", "unstable-options"])
             .run_and_wait()
             .map_err(CompileLibError::CargoBuildFailed)?;
         Ok(())
