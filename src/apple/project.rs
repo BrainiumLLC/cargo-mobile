@@ -111,13 +111,6 @@ pub fn gen(
             map.insert("ios-vendor-sdks", metadata.ios().vendor_sdks());
             map.insert("macos-frameworks", metadata.macos().frameworks());
             map.insert(
-                "macos-valid-archs",
-                metadata
-                    .macos()
-                    .valid_archs()
-                    .unwrap_or_else(|| &default_archs),
-            );
-            map.insert(
                 "macos-vendor-frameworks",
                 metadata.macos().vendor_frameworks(),
             );
