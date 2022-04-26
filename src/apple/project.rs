@@ -93,15 +93,30 @@ pub fn gen(
     let ios_pods = metadata.ios().pods().unwrap_or_default();
     let macos_pods = metadata.macos().pods().unwrap_or_default();
 
+    let default_archs = [String::from("arm64"), String::from("x86_64")];
     bike.filter_and_process(
         src,
         &dest,
         |map| {
             map.insert("file-groups", &source_dirs);
             map.insert("ios-frameworks", metadata.ios().frameworks());
+            map.insert(
+                "ios-valid-archs",
+                metadata
+                    .ios()
+                    .valid_archs()
+                    .unwrap_or_else(|| &default_archs),
+            );
             map.insert("ios-vendor-frameworks", metadata.ios().vendor_frameworks());
             map.insert("ios-vendor-sdks", metadata.ios().vendor_sdks());
             map.insert("macos-frameworks", metadata.macos().frameworks());
+            map.insert(
+                "macos-valid-archs",
+                metadata
+                    .macos()
+                    .valid_archs()
+                    .unwrap_or_else(|| &default_archs),
+            );
             map.insert(
                 "macos-vendor-frameworks",
                 metadata.macos().vendor_frameworks(),
