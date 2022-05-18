@@ -70,6 +70,7 @@ pub struct Raw {
     pub macos_version: Option<String>,
     pub use_legacy_build_system: Option<bool>,
     pub plist_pairs: Option<Vec<PListPair>>,
+    pub enable_bitcode: Option<bool>,
 }
 
 impl Raw {
@@ -92,6 +93,7 @@ impl Raw {
             macos_version: None,
             use_legacy_build_system: None,
             plist_pairs: None,
+            enable_bitcode: None,
         })
     }
 
@@ -173,6 +175,7 @@ impl Raw {
             macos_version: None,
             use_legacy_build_system: None,
             plist_pairs: None,
+            enable_bitcode: None,
         })
     }
 }

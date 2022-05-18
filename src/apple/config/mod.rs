@@ -303,6 +303,7 @@ pub struct Config {
     macos_version: VersionDouble,
     use_legacy_build_system: bool,
     plist_pairs: Vec<PListPair>,
+    enable_bitcode: bool,
 }
 
 impl Config {
@@ -373,6 +374,7 @@ impl Config {
                 .unwrap_or(DEFAULT_MACOS_VERSION),
             use_legacy_build_system: raw.use_legacy_build_system.unwrap_or(true),
             plist_pairs: raw.plist_pairs.unwrap_or_default(),
+            enable_bitcode: raw.enable_bitcode.unwrap_or(false),
         })
     }
 
