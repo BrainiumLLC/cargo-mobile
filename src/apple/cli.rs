@@ -249,7 +249,7 @@ impl Exec for Input {
         }
 
         fn open_in_xcode(config: &Config) -> Result<(), Error> {
-            os::open_file_with("Xcode", config.project_dir()).map_err(Error::OpenFailed)
+            os::open_in_xcode(config.project_dir()).map_err(Error::OpenFailed)
         }
 
         let version_check = || rust_version_check(wrapper).map_err(Error::RustVersionCheckFailed);
