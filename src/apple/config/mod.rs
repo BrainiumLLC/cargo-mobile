@@ -54,6 +54,7 @@ pub struct BuildScript {
 #[serde(rename_all = "kebab-case")]
 pub struct Platform {
     features: Option<Vec<String>>,
+    libraries: Option<Vec<String>>,
     frameworks: Option<Vec<String>>,
     valid_archs: Option<Vec<String>>,
     vendor_frameworks: Option<Vec<String>>,
@@ -74,6 +75,10 @@ impl Platform {
 
     pub fn features(&self) -> Option<&[String]> {
         self.features.as_deref()
+    }
+
+    pub fn libraries(&self) -> &[String] {
+        self.libraries.as_deref().unwrap_or_else(|| &[])
     }
 
     pub fn frameworks(&self) -> &[String] {

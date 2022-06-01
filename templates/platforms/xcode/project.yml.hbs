@@ -81,6 +81,9 @@ targets:
         link: false
       - framework: lib{{snake-case app.name}}.a
         embed: false
+      {{~#each ios-libraries}}
+      - framework: {{this}}
+        embed: false{{/each}}
       {{~#each ios-vendor-frameworks}}
       - framework: {{prefix-path this}}{{/each}}
       {{~#each ios-vendor-sdks}}
@@ -185,6 +188,9 @@ targets:
         link: false
       - framework: lib{{snake-case app.name}}.a
         embed: false
+      {{~#each macos-libraries}}
+      - framework: {{this}}
+        embed: false{{/each}}
       {{~#each macos-vendor-frameworks}}
       - framework: {{prefix-path this}}{{/each}}
       {{~#each macos-vendor-sdks}}
