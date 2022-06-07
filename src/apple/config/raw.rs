@@ -1,10 +1,10 @@
 use crate::{
     apple::teams,
-    util::{cli::TextWrapper, prompt},
+    util::{cli::TextWrapper, prompt, OneOrMany},
 };
 use colored::{Color, Colorize as _};
 use serde::{Deserialize, Serialize};
-use std::fmt::{self, Display};
+use std::fmt::{self, Debug, Display};
 
 #[derive(Debug)]
 pub enum DetectError {
@@ -43,9 +43,16 @@ impl Display for PromptError {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum PlistValue {
+    Bool(bool),
+    Strings(OneOrMany<String>),
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PListPair {
     key: String,
-    value: String,
+    value: PlistValue,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -63,6 +70,7 @@ pub struct Raw {
     pub macos_version: Option<String>,
     pub use_legacy_build_system: Option<bool>,
     pub plist_pairs: Option<Vec<PListPair>>,
+    pub enable_bitcode: Option<bool>,
 }
 
 impl Raw {
@@ -85,6 +93,7 @@ impl Raw {
             macos_version: None,
             use_legacy_build_system: None,
             plist_pairs: None,
+            enable_bitcode: None,
         })
     }
 
@@ -166,6 +175,7 @@ impl Raw {
             macos_version: None,
             use_legacy_build_system: None,
             plist_pairs: None,
+            enable_bitcode: None,
         })
     }
 }
