@@ -96,6 +96,7 @@ targets:
     preBuildScripts:
       - script: ${HOME}/.cargo/bin/cargo-apple xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths "${FRAMEWORK_SEARCH_PATHS:?}" --header-search-paths "${HEADER_SEARCH_PATHS:?}" --gcc-preprocessor-definitions "${GCC_PREPROCESSOR_DEFINITIONS:?}" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}
         name: Build Rust Code
+        basedOnDependencyAnalysis: false
         outputFiles:
           - $(SRCROOT)/target/aarch64-apple-ios/${CONFIGURATION}/deps/lib{{snake-case app.name}}.a
           - $(SRCROOT)/target/x86_64-apple-ios/${CONFIGURATION}/deps/lib{{snake-case app.name}}.a
@@ -198,6 +199,7 @@ targets:
     preBuildScripts:
       - script: ${HOME}/.cargo/bin/cargo-apple xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths "${FRAMEWORK_SEARCH_PATHS:?}" --header-search-paths "${HEADER_SEARCH_PATHS:?}" --gcc-preprocessor-definitions "${GCC_PREPROCESSOR_DEFINITIONS:?}" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}
         name: Build Rust Code
+        basedOnDependencyAnalysis: false
         outputFiles:
           - $(SRCROOT)/target/x86_64-apple-darwin/${CONFIGURATION}/deps/lib{{snake-case app.name}}.a
       {{~#each macos-pre-build-scripts}}{{#if this.path}}
