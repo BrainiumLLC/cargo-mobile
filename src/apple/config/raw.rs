@@ -1,10 +1,13 @@
 use crate::{
     apple::teams,
-    util::{cli::TextWrapper, prompt, OneOrMany},
+    util::{cli::TextWrapper, prompt},
 };
 use colored::{Color, Colorize as _};
 use serde::{Deserialize, Serialize};
-use std::fmt::{self, Debug, Display};
+use std::{
+    collections::BTreeMap,
+    fmt::{self, Debug, Display},
+};
 
 #[derive(Debug)]
 pub enum DetectError {
@@ -42,11 +45,69 @@ impl Display for PromptError {
     }
 }
 
+fn value_to_string(value: &PlistValue) -> String {
+    match value {
+        PlistValue::Bool(bool) => bool.to_string(),
+        PlistValue::String(string) => string.to_owned(),
+        PlistValue::Array(array) => {
+            let string = array
+                .iter()
+                .map(|value| value_to_string(value))
+                .collect::<Vec<_>>()
+                .join(",");
+            format!("[{}]", string)
+        }
+        PlistValue::Dictionary(dict) => todo!(),
+    }
+}
+
+fn pair_to_string(key: &str, value: &PlistValue) -> String {
+    format!("{{{:?}: {}}}", key, value_to_string(value))
+}
+
+fn dicitonary_to_string(dict: &PlistDictionary) -> String {
+    let joint = dict
+        .0
+        .iter()
+        .map(|(key, value)| pair_to_string(key, value))
+        .collect::<Vec<_>>()
+        .join(",");
+    format!("{{{}}}", joint)
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(transparent)]
+pub struct NestedPair(Box<PListPair>);
+
+impl Serialize for NestedPair {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&pair_to_string(&self.0.key, &self.0.value))
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(transparent)]
+pub struct PlistDictionary(BTreeMap<String, PlistValue>);
+
+impl Serialize for PlistDictionary {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&dicitonary_to_string(&self))
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum PlistValue {
     Bool(bool),
-    Strings(OneOrMany<String>),
+    String(String),
+    Array(Vec<PlistValue>),
+    Dictionary(PlistDictionary),
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
