@@ -62,7 +62,7 @@ fn value_to_string(value: &PlistValue) -> String {
 }
 
 fn pair_to_string(key: &str, value: &PlistValue) -> String {
-    format!("{{{:?}: {}}}", key, value_to_string(value))
+    format!("{}: {}", key, value_to_string(value))
 }
 
 fn dicitonary_to_string(dict: &PlistDictionary) -> String {
@@ -72,7 +72,7 @@ fn dicitonary_to_string(dict: &PlistDictionary) -> String {
         .map(|pair| pair_to_string(&pair.0.key, &pair.0.value))
         .collect::<Vec<_>>()
         .join(",");
-    format!("{}", joint)
+    format!("{{{}}}", joint)
 }
 
 #[derive(Clone, Debug, Deserialize)]
