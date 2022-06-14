@@ -57,7 +57,7 @@ fn value_to_string(value: &PlistValue) -> String {
                 .join(",");
             format!("[{}]", string)
         }
-        PlistValue::Dictionary(dict) => todo!(),
+        PlistValue::Dictionary(dict) => dicitonary_to_string(dict),
     }
 }
 
@@ -67,17 +67,17 @@ fn pair_to_string(key: &str, value: &PlistValue) -> String {
 
 fn dicitonary_to_string(dict: &PlistDictionary) -> String {
     let joint = dict
-        .0
+        .dictionary
         .iter()
-        .map(|(key, value)| pair_to_string(key, value))
+        .map(|pair| pair_to_string(&pair.0.key, &pair.0.value))
         .collect::<Vec<_>>()
         .join(",");
-    format!("{{{}}}", joint)
+    format!("{}", joint)
 }
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(transparent)]
-pub struct NestedPair(Box<PListPair>);
+pub struct NestedPair(PListPair);
 
 impl Serialize for NestedPair {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -89,8 +89,9 @@ impl Serialize for NestedPair {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-#[serde(transparent)]
-pub struct PlistDictionary(BTreeMap<String, PlistValue>);
+pub struct PlistDictionary {
+    dictionary: Vec<NestedPair>,
+}
 
 impl Serialize for PlistDictionary {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
