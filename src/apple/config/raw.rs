@@ -57,7 +57,7 @@ fn value_to_string(value: &PlistValue) -> String {
                 .join(",");
             format!("[{}]", string)
         }
-        PlistValue::Dictionary(dict) => dicitonary_to_string(dict),
+        PlistValue::Dictionary(dict) => dictionary_to_string(dict),
     }
 }
 
@@ -65,7 +65,7 @@ fn pair_to_string(key: &str, value: &PlistValue) -> String {
     format!("{}: {}", key, value_to_string(value))
 }
 
-fn dicitonary_to_string(dict: &PlistDictionary) -> String {
+fn dictionary_to_string(dict: &PlistDictionary) -> String {
     let joint = dict
         .dictionary
         .iter()
@@ -98,7 +98,7 @@ impl Serialize for PlistDictionary {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_str(&dicitonary_to_string(&self))
+        serializer.serialize_str(&dictionary_to_string(&self))
     }
 }
 
