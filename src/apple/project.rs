@@ -99,6 +99,7 @@ pub fn gen(
         &dest,
         |map| {
             map.insert("file-groups", &source_dirs);
+            map.insert("ios-libraries", metadata.ios().libraries());
             map.insert("ios-frameworks", metadata.ios().frameworks());
             map.insert(
                 "ios-valid-archs",
@@ -109,6 +110,7 @@ pub fn gen(
             );
             map.insert("ios-vendor-frameworks", metadata.ios().vendor_frameworks());
             map.insert("ios-vendor-sdks", metadata.ios().vendor_sdks());
+            map.insert("macos-libraries", metadata.ios().libraries());
             map.insert("macos-frameworks", metadata.macos().frameworks());
             map.insert(
                 "macos-vendor-frameworks",
