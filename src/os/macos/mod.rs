@@ -104,6 +104,13 @@ pub fn open_file_with(
     Ok(())
 }
 
+pub fn open_in_xcode(path: impl AsRef<OsStr>) -> bossy::Result<()> {
+    bossy::Command::impure("xed")
+        .with_arg(path.as_ref())
+        .run_and_wait()?;
+    Ok(())
+}
+
 #[cfg(target_os = "macos")]
 pub fn command_path(name: &str) -> bossy::Result<bossy::Output> {
     bossy::Command::impure("command")
