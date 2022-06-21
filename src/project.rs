@@ -88,7 +88,7 @@ pub fn gen(
                         "the following files will be overwritten:\n{:#?}\nOverwrite files?",
                         to_overwrite
                     ),
-                    Some(prompt::YesOrNo::No),
+                    Some(prompt::YesOrNo::Yes),
                 )
                 .map_err(Error::PromptFailed)?
                 .unwrap_or(prompt::YesOrNo::No)
