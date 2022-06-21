@@ -82,7 +82,7 @@ pub fn gen(
                     .collect::<Vec<_>>()
             };
             if !to_overwrite.is_empty() {
-                log::warn!("cargo-mobile expects a fresh project setup");
+                log::warn!("first `cargo mobile init` expects a fresh project setup");
                 if prompt::yes_no(
                     format!(
                         "the following files will be overwritten:\n{:#?}\nOverwrite files?",
