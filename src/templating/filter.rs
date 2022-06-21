@@ -1,4 +1,7 @@
-use crate::config::{Config, Origin};
+use crate::{
+    config::{Config, Origin},
+    util::prompt,
+};
 use bicycle::Action;
 use ignore::gitignore::Gitignore;
 use std::{
