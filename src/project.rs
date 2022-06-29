@@ -18,7 +18,7 @@ pub enum Error {
         cause: bicycle::ProcessingError,
     },
     PromptFailed(std::io::Error),
-    OverrideFilePermissionDenied,
+    OverwriteFilePermissionDenied,
 }
 
 impl Reportable for Error {
@@ -35,11 +35,12 @@ impl Reportable for Error {
                 ),
                 cause,
             ),
-            Self::PromptFailed(err) => {
-                Report::error("Failed to prompt to for permission to override files", err)
-            }
-            Self::OverrideFilePermissionDenied => {
-                Report::error("Failed to get persmission to override project files", "")
+            Self::PromptFailed(err) => Report::error(
+                "Failed to prompt to for permission to overwrite project files",
+                err,
+            ),
+            Self::OverwriteFilePermissionDenied => {
+                Report::error("Failed to get persmission to overwrite project files", "")
             }
         }
     }
@@ -94,7 +95,7 @@ pub fn gen(
                 .unwrap_or(prompt::YesOrNo::No)
                 .no()
                 {
-                    return Err(Error::OverrideFilePermissionDenied);
+                    return Err(Error::OverwriteFilePermissionDenied);
                 }
             }
         }
