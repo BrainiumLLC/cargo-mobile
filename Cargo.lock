@@ -173,6 +173,7 @@ dependencies = [
  "thiserror",
  "toml",
  "ureq",
+ "walkdir",
  "yes-or-no",
 ]
 
