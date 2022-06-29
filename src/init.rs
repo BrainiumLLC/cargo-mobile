@@ -124,7 +124,14 @@ pub fn exec(
         .map_err(Error::FilterConfigureFailed)?;
 
     // Generate the base project
-    project::gen(&config, &bike, &filter, submodule_commit).map_err(Error::ProjectInitFailed)?;
+    project::gen(
+        &config,
+        &bike,
+        &filter,
+        submodule_commit,
+        dot_first_init_exists,
+    )
+    .map_err(Error::ProjectInitFailed)?;
 
     let asset_dir = config.app().asset_dir();
     if !asset_dir.is_dir() {
