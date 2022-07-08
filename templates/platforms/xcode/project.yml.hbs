@@ -94,12 +94,6 @@ targets:
       {{~#each ios-frameworks}}
       - sdk: {{this}}.framework{{/each}}
     preBuildScripts:
-      - script: ${HOME}/.cargo/bin/cargo-apple xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths "${FRAMEWORK_SEARCH_PATHS:?}" --header-search-paths "${HEADER_SEARCH_PATHS:?}" --gcc-preprocessor-definitions "${GCC_PREPROCESSOR_DEFINITIONS:?}" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}
-        name: Build Rust Code
-        basedOnDependencyAnalysis: false
-        outputFiles:
-          - $(SRCROOT)/target/aarch64-apple-ios/${CONFIGURATION}/deps/lib{{snake-case app.name}}.a
-          - $(SRCROOT)/target/x86_64-apple-ios/${CONFIGURATION}/deps/lib{{snake-case app.name}}.a
       {{~#each ios-pre-build-scripts}}{{#if this.path}}
       - path {{this.path}}{{/if}}{{#if this.script}}
       - script: {{this.script}}{{/if}}{{#if this.name}}
@@ -117,7 +111,13 @@ targets:
         runOnlyWhenInstalling: {{this.run-only-when-installing}}{{/if}}{{#if this.based-on-dependency-analysis}}
         basedOnDependencyAnalysis: {{this.based-on-dependency-analysis}}{{/if}}{{#if this.discovered-dependency-file}}
         discoveredDependencyFile: {{this.discovered-dependency-file}}{{/if}}
-      {{~/each~}}
+      {{~/each}}
+      - script: ${HOME}/.cargo/bin/cargo-apple xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths "${FRAMEWORK_SEARCH_PATHS:?}" --header-search-paths "${HEADER_SEARCH_PATHS:?}" --gcc-preprocessor-definitions "${GCC_PREPROCESSOR_DEFINITIONS:?}" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}
+        name: Build Rust Code
+        basedOnDependencyAnalysis: false
+        outputFiles:
+          - $(SRCROOT)/target/aarch64-apple-ios/${CONFIGURATION}/deps/lib{{snake-case app.name}}.a
+          - $(SRCROOT)/target/x86_64-apple-ios/${CONFIGURATION}/deps/lib{{snake-case app.name}}.a
     {{~#if ios-post-compile-scripts}}
     postCompileScripts:
       {{~#each ios-post-compile-scripts}}{{#if this.path}}
@@ -197,11 +197,6 @@ targets:
       {{~#each macos-frameworks}}
       - sdk: {{this}}.framework{{/each}}
     preBuildScripts:
-      - script: ${HOME}/.cargo/bin/cargo-apple xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths "${FRAMEWORK_SEARCH_PATHS:?}" --header-search-paths "${HEADER_SEARCH_PATHS:?}" --gcc-preprocessor-definitions "${GCC_PREPROCESSOR_DEFINITIONS:?}" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}
-        name: Build Rust Code
-        basedOnDependencyAnalysis: false
-        outputFiles:
-          - $(SRCROOT)/target/x86_64-apple-darwin/${CONFIGURATION}/deps/lib{{snake-case app.name}}.a
       {{~#each macos-pre-build-scripts}}{{#if this.path}}
       - path {{this.path}}{{/if}}{{#if this.script}}
       - script: {{this.script}}{{/if}}{{#if this.name}}
@@ -219,7 +214,12 @@ targets:
         runOnlyWhenInstalling: {{this.run-only-when-installing}}{{/if}}{{#if this.based-on-dependency-analysis}}
         basedOnDependencyAnalysis: {{this.based-on-dependency-analysis}}{{/if}}{{#if this.discovered-dependency-file}}
         discoveredDependencyFile: {{this.discovered-dependency-file}}{{/if}}
-      {{~/each~}}
+      {{~/each}}
+      - script: ${HOME}/.cargo/bin/cargo-apple xcode-script -v --platform ${PLATFORM_DISPLAY_NAME:?} --sdk-root ${SDKROOT:?} --framework-search-paths "${FRAMEWORK_SEARCH_PATHS:?}" --header-search-paths "${HEADER_SEARCH_PATHS:?}" --gcc-preprocessor-definitions "${GCC_PREPROCESSOR_DEFINITIONS:?}" --configuration ${CONFIGURATION:?} ${FORCE_COLOR} ${ARCHS:?}
+        name: Build Rust Code
+        basedOnDependencyAnalysis: false
+        outputFiles:
+          - $(SRCROOT)/target/x86_64-apple-darwin/${CONFIGURATION}/deps/lib{{snake-case app.name}}.a
     {{#if macos-post-compile-scripts}}
     postCompileScripts:
       {{~#each macos-post-compile-scripts}}{{#if this.path}}
