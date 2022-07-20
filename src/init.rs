@@ -166,6 +166,8 @@ pub fn exec(
         util::host_target_triple().map_err(Error::HostTargetTripleDetectionFailed)?,
     );
 
+    dot_cargo.set_env(config.env());
+
     let metadata = Metadata::load(&config.app().root_dir()).map_err(Error::MetadataFailed)?;
 
     // Generate Xcode project
