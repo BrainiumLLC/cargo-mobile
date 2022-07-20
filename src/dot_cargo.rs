@@ -148,8 +148,8 @@ impl DotCargo {
         self.build = Some(DotCargoBuild::new(target));
     }
 
-    pub fn set_env(&mut self, env: &Option<toml::value::Table>) {
-        self.env = env.clone()
+    pub fn set_env(&mut self, env: Option<toml::value::Table>) {
+        self.env = env
     }
 
     pub fn insert_target(&mut self, name: impl Into<String>, target: DotCargoTarget) {
