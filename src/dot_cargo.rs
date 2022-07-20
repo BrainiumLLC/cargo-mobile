@@ -107,6 +107,7 @@ pub struct DotCargo {
     target: BTreeMap<String, DotCargoTarget>,
     #[serde(flatten)]
     extra: BTreeMap<String, Value>,
+    env: Option<toml::value::Table>,
 }
 
 impl DotCargo {
@@ -145,6 +146,10 @@ impl DotCargo {
 
     pub fn set_default_target(&mut self, target: impl Into<String>) {
         self.build = Some(DotCargoBuild::new(target));
+    }
+
+    pub fn set_env(&mut self, env: Option<toml::value::Table>) {
+        self.env = env
     }
 
     pub fn insert_target(&mut self, name: impl Into<String>, target: DotCargoTarget) {

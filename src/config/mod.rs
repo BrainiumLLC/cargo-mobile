@@ -104,6 +104,7 @@ pub struct Config {
     #[cfg(target_os = "macos")]
     apple: apple::config::Config,
     android: android::config::Config,
+    env: Option<toml::value::Table>,
 }
 
 impl Config {
@@ -119,6 +120,7 @@ impl Config {
             #[cfg(target_os = "macos")]
             apple,
             android,
+            env: raw.env,
         })
     }
 
@@ -178,6 +180,10 @@ impl Config {
 
     pub fn android(&self) -> &android::config::Config {
         &self.android
+    }
+
+    pub fn env(&self) -> &Option<toml::value::Table> {
+        &self.env
     }
 
     pub fn build_a_bike(&self) -> bicycle::Bicycle {

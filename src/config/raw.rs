@@ -109,6 +109,7 @@ pub struct Raw {
     #[cfg(target_os = "macos")]
     pub apple: Option<apple::config::Raw>,
     pub android: Option<android::config::Raw>,
+    pub env: Option<toml::value::Table>,
 }
 
 impl Raw {
@@ -121,6 +122,7 @@ impl Raw {
             #[cfg(target_os = "macos")]
             apple: Some(apple),
             android: None,
+            env: None,
         })
     }
 
@@ -133,6 +135,7 @@ impl Raw {
             #[cfg(target_os = "macos")]
             apple: Some(apple),
             android: None,
+            env: None,
         })
     }
 
