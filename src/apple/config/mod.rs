@@ -124,6 +124,14 @@ impl Platform {
     pub fn command_line_arguments(&self) -> &[String] {
         self.command_line_arguments.as_deref().unwrap_or_default()
     }
+
+    pub fn add_features(&mut self, features: String) {
+        if let Some(f) = &mut self.features {
+            f.push(features);
+        } else {
+            self.features = Some(vec![features]);
+        }
+    }
 }
 
 const fn default_true() -> bool {
@@ -161,6 +169,11 @@ impl Metadata {
 
     pub fn macos(&self) -> &Platform {
         &self.macos
+    }
+
+    pub fn add_features(&mut self, features: String) {
+        self.ios.add_features(features.clone());
+        self.macos.add_features(features);
     }
 }
 

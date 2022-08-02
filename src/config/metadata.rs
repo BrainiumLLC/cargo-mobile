@@ -65,6 +65,11 @@ impl Metadata {
     }
 
     #[cfg(target_os = "macos")]
+    pub fn add_features(&mut self, features: String) {
+        self.apple.add_features(features);
+    }
+
+    #[cfg(target_os = "macos")]
     pub fn apple(&self) -> &crate::apple::config::Metadata {
         &self.apple
     }

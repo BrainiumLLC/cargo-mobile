@@ -279,11 +279,16 @@ impl<'a> Target<'a> {
         env: &Env,
         noise_level: opts::NoiseLevel,
         profile: opts::Profile,
+        features: Option<String>,
     ) -> Result<(), BuildError> {
         let configuration = profile.as_str();
+        let features_val = features
+            .map(|f| format!("--features {f}"))
+            .unwrap_or_default();
         bossy::Command::pure("xcodebuild")
             .with_env_vars(env.explicit_env())
             .with_env_var("FORCE_COLOR", "--force-color")
+            .with_env_var("FEATURES", features_val)
             .with_args(verbosity(noise_level))
             .with_args(&["-scheme", &config.scheme()])
             .with_arg("-workspace")
@@ -303,6 +308,7 @@ impl<'a> Target<'a> {
         env: &Env,
         noise_level: opts::NoiseLevel,
         profile: opts::Profile,
+        features: Option<String>,
         build_number: Option<VersionNumber>,
     ) -> Result<(), ArchiveError> {
         if let Some(build_number) = build_number {
@@ -315,8 +321,12 @@ impl<'a> Target<'a> {
         }
         let configuration = profile.as_str();
         let archive_path = config.archive_dir().join(&config.scheme());
+        let features_val = features
+            .map(|f| format!("--features {f}"))
+            .unwrap_or_default();
         bossy::Command::pure("xcodebuild")
             .with_env_vars(env.explicit_env())
+            .with_env_var("FEATURES", features_val)
             .with_args(verbosity(noise_level))
             .with_args(&["-scheme", &config.scheme()])
             .with_arg("-workspace")

@@ -74,15 +74,16 @@ impl<'a> Device<'a> {
         noise_level: opts::NoiseLevel,
         non_interactive: opts::NonInteractive,
         profile: opts::Profile,
+        features: Option<String>,
     ) -> Result<(), RunError> {
         // TODO: These steps are run unconditionally, which is slooooooow
         println!("Building app...");
         self.target
-            .build(config, env, noise_level, profile)
+            .build(config, env, noise_level, profile, features.clone())
             .map_err(RunError::BuildFailed)?;
         println!("Archiving app...");
         self.target
-            .archive(config, env, noise_level, profile, None)
+            .archive(config, env, noise_level, profile, features, None)
             .map_err(RunError::ArchiveFailed)?;
         println!("Exporting app...");
         self.target
