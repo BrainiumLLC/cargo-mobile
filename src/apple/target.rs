@@ -309,6 +309,7 @@ impl<'a> Target<'a> {
         noise_level: opts::NoiseLevel,
         profile: opts::Profile,
         features: Option<String>,
+        configuration_suffix: Option<String>,
         build_number: Option<VersionNumber>,
     ) -> Result<(), ArchiveError> {
         if let Some(build_number) = build_number {
@@ -320,7 +321,9 @@ impl<'a> Target<'a> {
             .map_err(ArchiveError::SetVersionFailed)?;
         }
         let configuration = profile.as_str();
-        let archive_path = config.archive_dir().join(&config.scheme());
+        let archive_path = config
+            .archive_dir(&configuration_suffix.unwrap_or_default())
+            .join(&config.scheme());
         let features_val = features
             .map(|f| format!("--features {f}"))
             .unwrap_or_default();
@@ -348,10 +351,11 @@ impl<'a> Target<'a> {
         config: &Config,
         env: &Env,
         noise_level: opts::NoiseLevel,
+        configuration_suffix: Option<String>,
     ) -> Result<(), ExportError> {
         // Super fun discrepancy in expectation of `-archivePath` value
         let archive_path = config
-            .archive_dir()
+            .archive_dir(&configuration_suffix.unwrap_or_default())
             .join(&format!("{}.xcarchive", config.scheme()));
         bossy::Command::pure("xcodebuild")
             .with_env_vars(env.explicit_env())

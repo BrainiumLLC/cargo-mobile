@@ -89,6 +89,11 @@ pub enum Command {
         features: Option<String>,
         #[structopt(flatten)]
         profile: cli::Profile,
+        #[structopt(
+            long = "suffix",
+            about = "Appended to archive name to differentiate builds in same project"
+        )]
+        suffix: Option<String>,
     },
     #[structopt(name = "run", about = "Deploys IPA to connected device")]
     Run {
@@ -340,6 +345,7 @@ impl Exec for Input {
                 targets,
                 build_number,
                 profile: cli::Profile { profile },
+                suffix,
             } => with_config(non_interactive, wrapper, features.clone(), |config, _| {
                 version_check()?;
                 ensure_init(config)?;
@@ -363,6 +369,7 @@ impl Exec for Input {
                                 noise_level,
                                 profile,
                                 features.clone(),
+                                suffix.clone(),
                                 Some(app_version),
                             )
                             .map_err(Error::ArchiveFailed)

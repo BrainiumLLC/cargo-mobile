@@ -83,11 +83,11 @@ impl<'a> Device<'a> {
             .map_err(RunError::BuildFailed)?;
         println!("Archiving app...");
         self.target
-            .archive(config, env, noise_level, profile, features, None)
+            .archive(config, env, noise_level, profile, features, None, None)
             .map_err(RunError::ArchiveFailed)?;
         println!("Exporting app...");
         self.target
-            .export(config, env, noise_level)
+            .export(config, env, noise_level, None)
             .map_err(RunError::ExportFailed)?;
         println!("Extracting IPA...");
         bossy::Command::pure("unzip")
