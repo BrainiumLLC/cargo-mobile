@@ -92,6 +92,8 @@ pub fn gen(
     let asset_catalogs = metadata.ios().asset_catalogs().unwrap_or_default();
     let ios_pods = metadata.ios().pods().unwrap_or_default();
     let macos_pods = metadata.macos().pods().unwrap_or_default();
+    let ios_pod_options = metadata.ios().pod_options().unwrap_or_default();
+    let macos_pod_options = metadata.macos().pod_options().unwrap_or_default();
 
     let default_archs = [String::from("arm64"), String::from("x86_64")];
     bike.filter_and_process(
@@ -120,6 +122,8 @@ pub fn gen(
             map.insert("asset-catalogs", asset_catalogs);
             map.insert("ios-pods", ios_pods);
             map.insert("macos-pods", macos_pods);
+            map.insert("ios-pod-options", ios_pod_options);
+            map.insert("macos-pod-options", macos_pod_options);
             map.insert(
                 "ios-additional-targets",
                 metadata.ios().additional_targets(),
