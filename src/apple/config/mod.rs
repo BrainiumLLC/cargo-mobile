@@ -61,6 +61,7 @@ pub struct Platform {
     vendor_sdks: Option<Vec<String>>,
     asset_catalogs: Option<Vec<PathBuf>>,
     pods: Option<Vec<Pod>>,
+    pod_options: Option<Vec<String>>,
     additional_targets: Option<Vec<PathBuf>>,
     pre_build_scripts: Option<Vec<BuildScript>>,
     post_compile_scripts: Option<Vec<BuildScript>>,
@@ -103,6 +104,10 @@ impl Platform {
 
     pub fn pods(&self) -> Option<&[Pod]> {
         self.pods.as_deref()
+    }
+
+    pub fn pod_options(&self) -> Option<&[String]> {
+        self.pod_options.as_deref()
     }
 
     pub fn additional_targets(&self) -> Option<&[PathBuf]> {
