@@ -63,6 +63,10 @@ ureq = "2.4.0"
 freedesktop_entry_parser = "1.1"
 lexical-core = "0.7.6"
 
+[target.'cfg(target_os = "freebsd")'.dependencies]
+freedesktop_entry_parser = "1.1"
+lexical-core = "0.7.6"
+
 [build-dependencies]
 bicycle = { git = "https://github.com/BrainiumLLC/bicycle", rev = "28080e0c6fa4067d9dd1b0f2b7322b6b32178e1f" }
 hit = "0.2.0"

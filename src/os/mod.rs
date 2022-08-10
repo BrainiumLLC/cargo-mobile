@@ -12,7 +12,13 @@ mod linux;
 #[cfg(target_os = "linux")]
 pub use self::linux::*;
 
-#[cfg(not(any(target_os = "macos", target_os = "linux")))]
+#[cfg(target_os = "freebsd")]
+mod freebsd;
+
+#[cfg(target_os = "freebsd")]
+pub use self::freebsd::*;
+
+#[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "freebsd")))]
 compile_error!("Host platform not yet supported by cargo-mobile! We'd love if you made a PR to add support for this platform ❤️");
 
 // TODO: we should probably expose common functionality throughout `os` in a
