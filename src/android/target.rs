@@ -15,7 +15,7 @@ use crate::{
 };
 use once_cell_regex::exports::once_cell::sync::OnceCell;
 use serde::Serialize;
-use std::{collections::BTreeMap, fmt, io, str};
+use std::{collections::BTreeMap, fmt, fs, io, path::Path, str};
 
 #[derive(Clone, Copy, Debug)]
 pub enum CargoMode {
@@ -48,6 +48,10 @@ pub enum CompileLibError {
         mode: CargoMode,
         cause: bossy::Error,
     },
+    FileWrite {
+        path: String,
+        cause: io::Error,
+    },
 }
 
 impl Reportable for CompileLibError {
@@ -56,6 +60,9 @@ impl Reportable for CompileLibError {
             Self::MissingTool(err) => Report::error("Failed to locate required build tool", err),
             Self::CargoFailed { mode, cause } => {
                 Report::error(format!("`Failed to run `cargo {}`", mode), cause)
+            }
+            Self::FileWrite { path, cause } => {
+                Report::error(format!("Failed to write file at {}", path), cause)
             }
         }
     }
@@ -186,11 +193,6 @@ impl<'a> Target<'a> {
         config: &Config,
         env: &Env,
     ) -> Result<DotCargoTarget, ndk::MissingToolError> {
-        let ar = env
-            .ndk
-            .binutil_path(ndk::Binutil::Ar, self.binutils_triple())?
-            .display()
-            .to_string();
         // Using clang as the linker seems to be the only way to get the right library search paths...
         let linker = env
             .ndk
@@ -202,9 +204,10 @@ impl<'a> Target<'a> {
             .display()
             .to_string();
         Ok(DotCargoTarget {
-            ar: Some(ar),
             linker: Some(linker),
             rustflags: vec![
+                "-L".to_owned(),
+                config.app().prefix_path(".cargo").display().to_string(),
                 "-Clink-arg=-landroid".to_owned(),
                 "-Clink-arg=-llog".to_owned(),
                 "-Clink-arg=-lOpenSLES".to_owned(),
@@ -222,6 +225,20 @@ impl<'a> Target<'a> {
         profile: Profile,
         mode: CargoMode,
     ) -> Result<(), CompileLibError> {
+        // workaround for missing libgcc in ndk versions higher then 23
+        // see https://github.com/rust-windowing/android-ndk-rs/pull/189
+        if env.ndk.version().unwrap_or_default().triple.major >= 23 {
+            let path = config.app().prefix_path(".cargo/libgcc.a");
+            if !path.exists() {
+                fs::write(&path, "INPUT(-lunwind)").map_err(|cause| {
+                    CompileLibError::FileWrite {
+                        path: path.to_string_lossy().to_string(),
+                        cause,
+                    }
+                })?;
+            }
+        }
+
         let min_sdk_version = config.min_sdk_version();
         // Force color, since gradle would otherwise give us uncolored output
         // (which Android Studio makes red, which is extra gross!)
@@ -236,12 +253,6 @@ impl<'a> Target<'a> {
             .with_release(profile.release())
             .into_command_pure(env)
             .with_env_var("ANDROID_NATIVE_API_LEVEL", min_sdk_version.to_string())
-            .with_env_var(
-                "TARGET_AR",
-                env.ndk
-                    .binutil_path(ndk::Binutil::Ar, self.binutils_triple())
-                    .map_err(CompileLibError::MissingTool)?,
-            )
             .with_env_var(
                 "TARGET_CC",
                 env.ndk
