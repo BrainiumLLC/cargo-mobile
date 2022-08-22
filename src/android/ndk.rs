@@ -53,6 +53,7 @@ impl Compiler {
 
 #[derive(Clone, Copy, Debug)]
 pub enum Binutil {
+    Ar,
     #[allow(dead_code)]
     Ld,
 }
@@ -60,6 +61,7 @@ pub enum Binutil {
 impl Binutil {
     fn as_str(&self) -> &'static str {
         match self {
+            Binutil::Ar => "ar",
             Binutil::Ld => "ld",
         }
     }
@@ -251,6 +253,16 @@ impl Env {
                 .join(LIB),
             LIB,
         )
+    }
+
+    pub fn ar_path(&self, triple: &str) -> Result<PathBuf, MissingToolError> {
+        let ndk_ver = self.version().unwrap_or_default();
+        let bin_path = if ndk_ver.triple.major >= 23 {
+            format!("llvm-{}", consts::AR)
+        } else {
+            format!("{}-{}", triple, consts::AR)
+        };
+        MissingToolError::check_file(self.tool_dir()?.join(bin_path), "ar")
     }
 
     fn readelf_path(&self, triple: &str) -> Result<PathBuf, MissingToolError> {
