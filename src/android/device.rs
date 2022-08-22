@@ -8,6 +8,7 @@ use super::{
 use crate::{
     env::ExplicitEnv as _,
     opts::{self, FilterLevel, NoiseLevel, Profile},
+    target::TargetTrait,
     util::{
         self,
         cli::{Report, Reportable},
@@ -228,7 +229,7 @@ impl<'a> Device<'a> {
     ) -> Result<(), ApkBuildError> {
         use heck::ToUpperCamelCase as _;
         JniLibs::remove_broken_links(config).map_err(ApkBuildError::LibSymlinkCleaningFailed)?;
-        let flavor = self.target.arch.to_uppercase();
+        let flavor = self.target.arch_camel_case();
         let build_ty = profile.as_str().to_upper_camel_case();
         gradlew(config, env)
             .with_arg(format!("assemble{}{}", flavor, build_ty))
@@ -269,7 +270,7 @@ impl<'a> Device<'a> {
 
     fn build_aab(&self, config: &Config, env: &Env, profile: Profile) -> Result<(), AabBuildError> {
         use heck::ToUpperCamelCase as _;
-        let flavor = self.target.arch.to_uppercase();
+        let flavor = self.target.arch_camel_case();
         let build_ty = profile.as_str().to_upper_camel_case();
         gradlew(config, env)
             .with_arg(format!(":app:bundle{}{}", flavor, build_ty))
