@@ -181,6 +181,16 @@ impl<'a> Target<'a> {
         Self::all().values().find(|target| target.abi == abi)
     }
 
+    pub fn arch_upper_camel_case(&'a self) -> &'a str {
+        match self.arch() {
+            "arm" => "Arm",
+            "arm64" => "Arm64",
+            "x86_64" => "X86_64",
+            "x86" => "X86",
+            arch => arch,
+        }
+    }
+
     pub fn generate_cargo_config(
         &self,
         config: &Config,
