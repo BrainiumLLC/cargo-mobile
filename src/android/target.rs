@@ -166,16 +166,6 @@ impl<'a> TargetTrait<'a> for Target<'a> {
     fn arch(&'a self) -> &'a str {
         self.arch
     }
-    
-    fn arch_upper_camel_case(&'a self) -> &'a str {
-        match self.arch() {
-            "arm" => "Arm",
-            "arm64" => "Arm64",
-            "x86_64" => "X86_64",
-            "x86" => "X86",
-            arch => arch,
-        }
-    }
 }
 
 impl<'a> Target<'a> {
@@ -189,6 +179,16 @@ impl<'a> Target<'a> {
 
     pub fn for_abi(abi: &str) -> Option<&'a Self> {
         Self::all().values().find(|target| target.abi == abi)
+    }
+
+    pub fn arch_upper_camel_case(&'a self) -> &'a str {
+        match self.arch() {
+            "arm" => "Arm",
+            "arm64" => "Arm64",
+            "x86_64" => "X86_64",
+            "x86" => "X86",
+            arch => arch,
+        }
     }
 
     pub fn generate_cargo_config(

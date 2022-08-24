@@ -8,7 +8,6 @@ use super::{
 use crate::{
     env::ExplicitEnv as _,
     opts::{self, FilterLevel, NoiseLevel, Profile},
-    target::TargetTrait,
     util::{
         self,
         cli::{Report, Reportable},
