@@ -16,7 +16,7 @@ use std::{
     path::PathBuf,
 };
 
-static DEFAULT_PROJECT_DIR: &str = "gen/apple";
+static DEFAULT_PROJECT_DIR: &str = "projects/apple";
 const DEFAULT_BUNDLE_VERSION: VersionNumber = VersionNumber::new(VersionTriple::new(1, 0, 0), None);
 const DEFAULT_IOS_VERSION: VersionDouble = VersionDouble::new(9, 0);
 const DEFAULT_MACOS_VERSION: VersionDouble = VersionDouble::new(11, 0);
