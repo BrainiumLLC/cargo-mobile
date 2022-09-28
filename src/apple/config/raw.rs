@@ -128,11 +128,6 @@ pub struct Raw {
     pub macos_features: Option<Vec<String>>,
     pub bundle_version: Option<String>,
     pub bundle_version_short: Option<String>,
-    pub ios_version: Option<String>,
-    pub macos_version: Option<String>,
-    pub use_legacy_build_system: Option<bool>,
-    pub plist_pairs: Option<Vec<PListPair>>,
-    pub enable_bitcode: Option<bool>,
 }
 
 impl Raw {
@@ -151,11 +146,6 @@ impl Raw {
             macos_features: None,
             bundle_version: None,
             bundle_version_short: None,
-            ios_version: None,
-            macos_version: None,
-            use_legacy_build_system: None,
-            plist_pairs: None,
-            enable_bitcode: None,
         })
     }
 
@@ -233,11 +223,6 @@ impl Raw {
             macos_features: None,
             bundle_version: None,
             bundle_version_short: None,
-            ios_version: None,
-            macos_version: None,
-            use_legacy_build_system: None,
-            plist_pairs: None,
-            enable_bitcode: None,
         })
     }
 }

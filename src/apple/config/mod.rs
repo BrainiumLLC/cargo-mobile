@@ -56,17 +56,6 @@ pub struct Platform {
     features: Option<Vec<String>>,
     libraries: Option<Vec<String>>,
     frameworks: Option<Vec<String>>,
-    valid_archs: Option<Vec<String>>,
-    vendor_frameworks: Option<Vec<String>>,
-    vendor_sdks: Option<Vec<String>>,
-    asset_catalogs: Option<Vec<PathBuf>>,
-    pods: Option<Vec<Pod>>,
-    pod_options: Option<Vec<String>>,
-    additional_targets: Option<Vec<PathBuf>>,
-    pre_build_scripts: Option<Vec<BuildScript>>,
-    post_compile_scripts: Option<Vec<BuildScript>>,
-    post_build_scripts: Option<Vec<BuildScript>>,
-    command_line_arguments: Option<Vec<String>>,
 }
 
 impl Platform {
@@ -84,50 +73,6 @@ impl Platform {
 
     pub fn frameworks(&self) -> &[String] {
         self.frameworks.as_deref().unwrap_or_else(|| &[])
-    }
-
-    pub fn valid_archs(&self) -> Option<&[String]> {
-        self.valid_archs.as_deref()
-    }
-
-    pub fn vendor_frameworks(&self) -> &[String] {
-        self.vendor_frameworks.as_deref().unwrap_or_else(|| &[])
-    }
-
-    pub fn vendor_sdks(&self) -> &[String] {
-        self.vendor_sdks.as_deref().unwrap_or_else(|| &[])
-    }
-
-    pub fn asset_catalogs(&self) -> Option<&[PathBuf]> {
-        self.asset_catalogs.as_deref()
-    }
-
-    pub fn pods(&self) -> Option<&[Pod]> {
-        self.pods.as_deref()
-    }
-
-    pub fn pod_options(&self) -> Option<&[String]> {
-        self.pod_options.as_deref()
-    }
-
-    pub fn additional_targets(&self) -> Option<&[PathBuf]> {
-        self.additional_targets.as_deref()
-    }
-
-    pub fn pre_build_scripts(&self) -> Option<&[BuildScript]> {
-        self.pre_build_scripts.as_deref()
-    }
-
-    pub fn post_compile_scripts(&self) -> Option<&[BuildScript]> {
-        self.post_compile_scripts.as_deref()
-    }
-
-    pub fn post_build_scripts(&self) -> Option<&[BuildScript]> {
-        self.post_build_scripts.as_deref()
-    }
-
-    pub fn command_line_arguments(&self) -> &[String] {
-        self.command_line_arguments.as_deref().unwrap_or_default()
     }
 
     pub fn add_features(&mut self, features: String) {
@@ -220,7 +165,6 @@ pub enum Error {
     DevelopmentTeamEmpty,
     ProjectDirInvalid(ProjectDirInvalid),
     BundleVersionInvalid(VersionTripleError),
-    IosVersionInvalid(VersionDoubleError),
     MacOsVersionInvalid(VersionDoubleError),
     IosVersionNumberInvalid(VersionNumberError),
     IosVersionNumberMismatch,
@@ -244,10 +188,6 @@ impl Error {
             Self::BundleVersionInvalid(err) => Report::error(
                 msg,
                 format!("`{}.app-version` invalid: {}", super::NAME, err),
-            ),
-            Self::IosVersionInvalid(err) => Report::error(
-                msg,
-                format!("`{}.ios-version` invalid: {}", super::NAME, err),
             ),
             Self::MacOsVersionInvalid(err) => Report::error(
                 msg,
@@ -322,11 +262,6 @@ pub struct Config {
     project_dir: String,
     bundle_version: VersionNumber,
     bundle_version_short: VersionTriple,
-    ios_version: VersionDouble,
-    macos_version: VersionDouble,
-    use_legacy_build_system: bool,
-    plist_pairs: Vec<PListPair>,
-    enable_bitcode: bool,
 }
 
 impl Config {
@@ -383,21 +318,6 @@ impl Config {
             project_dir,
             bundle_version,
             bundle_version_short,
-            ios_version: raw
-                .ios_version
-                .map(|str| VersionDouble::from_str(&str))
-                .transpose()
-                .map_err(Error::IosVersionInvalid)?
-                .unwrap_or(DEFAULT_IOS_VERSION),
-            macos_version: raw
-                .macos_version
-                .map(|str| VersionDouble::from_str(&str))
-                .transpose()
-                .map_err(Error::IosVersionInvalid)?
-                .unwrap_or(DEFAULT_MACOS_VERSION),
-            use_legacy_build_system: raw.use_legacy_build_system.unwrap_or(true),
-            plist_pairs: raw.plist_pairs.unwrap_or_default(),
-            enable_bitcode: raw.enable_bitcode.unwrap_or(false),
         })
     }
 
