@@ -5,10 +5,7 @@ pub use self::raw::*;
 use super::version_number::{VersionNumber, VersionNumberError};
 use crate::{
     config::app::App,
-    util::{
-        self, cli::Report, Pod, VersionDouble, VersionDoubleError, VersionTriple,
-        VersionTripleError,
-    },
+    util::{self, cli::Report, VersionDoubleError, VersionTriple, VersionTripleError},
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -18,8 +15,6 @@ use std::{
 
 static DEFAULT_PROJECT_DIR: &str = "projects/apple";
 const DEFAULT_BUNDLE_VERSION: VersionNumber = VersionNumber::new(VersionTriple::new(1, 0, 0), None);
-const DEFAULT_IOS_VERSION: VersionDouble = VersionDouble::new(9, 0);
-const DEFAULT_MACOS_VERSION: VersionDouble = VersionDouble::new(11, 0);
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]

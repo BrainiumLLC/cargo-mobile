@@ -89,7 +89,6 @@ pub fn gen(
         .map_err(Error::MissingPack)?
         .expect_local();
 
-    let default_archs = [String::from("arm64"), String::from("x86_64")];
     bike.filter_and_process(
         src,
         &dest,

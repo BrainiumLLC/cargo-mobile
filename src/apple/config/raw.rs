@@ -4,10 +4,7 @@ use crate::{
 };
 use colored::{Color, Colorize as _};
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::BTreeMap,
-    fmt::{self, Debug, Display},
-};
+use std::fmt::{self, Debug, Display};
 
 #[derive(Debug)]
 pub enum DetectError {
