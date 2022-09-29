@@ -61,6 +61,8 @@ targets:
         LIBRARY_SEARCH_PATHS[sdk=iphoneos*]: $(inherited) "{{prefix-path "target/aarch64-apple-ios/$(CONFIGURATION)"}}"
         LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]: $(inherited) "{{prefix-path "target/x86_64-apple-ios/$(CONFIGURATION)"}}"
         ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES: true
+        {{~#if ios-dir-exists}}
+        INFOPLIST_FILE: {{app.name}}_iOS/Info.plist{{~/if}}
       groups: [app]
     dependencies:
       - framework: lib{{snake-case app.name}}.a
@@ -93,6 +95,8 @@ targets:
     settings:
       base:
         LIBRARY_SEARCH_PATHS: $(inherited) "{{prefix-path "target/x86_64-apple-darwin/$(CONFIGURATION)"}}"
+        {{~#if macos-dir-exists}}
+        INFOPLIST_FILE: {{app.name}}_macOS/Info.plist{{~/if}}
       groups: [app]
     dependencies:
       - framework: lib{{snake-case app.name}}.a
