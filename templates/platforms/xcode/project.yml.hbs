@@ -2,8 +2,8 @@ name: {{app.name}}
 options:
   bundleIdPrefix: {{reverse-domain app.domain}}
   deploymentTarget:
-    iOS: {{apple.ios-version}}
-    macOS: {{apple.macos-version}}
+    iOS: 9.0
+    macOS: 9.0
 fileGroups: [{{join file-groups}}]
 configs:
   debug: debug
@@ -55,7 +55,7 @@ targets:
         RUST_LOG: info
     settings:
       base:
-        ENABLE_BITCODE: {{apple.enable-bitcode}}
+        ENABLE_BITCODE: false
         ARCHS: [arm64, x86_64] # rustc doesn't support arm64e yet
         VALID_ARCHS: [arm64, x86_64] # rustc doesn't support arm64e yet
         LIBRARY_SEARCH_PATHS[sdk=iphoneos*]: $(inherited) "{{prefix-path "target/aarch64-apple-ios/$(CONFIGURATION)"}}"
