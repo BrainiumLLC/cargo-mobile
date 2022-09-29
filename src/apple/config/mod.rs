@@ -329,23 +329,6 @@ impl Config {
         self.project_dir().is_dir()
     }
 
-    pub fn ios_dir(&self) -> PathBuf {
-        self.project_dir().join(format!("{}_iOS", self.app.name()))
-    }
-
-    pub fn ios_dir_exists(&self) -> bool {
-        self.ios_dir().is_dir()
-    }
-
-    pub fn macos_dir(&self) -> PathBuf {
-        self.project_dir()
-            .join(format!("{}_macOS", self.app.name()))
-    }
-
-    pub fn macos_dir_exists(&self) -> bool {
-        self.macos_dir().is_dir()
-    }
-
     pub fn workspace_path(&self) -> PathBuf {
         let root_workspace = self
             .project_dir()

@@ -406,7 +406,11 @@ impl Exec for Input {
                     // The `PATH` env var Xcode gives us is missing any additions
                     // made by the user's profile, so we'll manually add cargo's
                     // `PATH`.
-                    let env = env.prepend_to_path(PathBuf::from("${HOME}").join(".cargo/bin"));
+                    let env = env.prepend_to_path(
+                        util::home_dir()
+                            .map_err(Error::NoHomeDir)?
+                            .join(".cargo/bin"),
+                    );
 
                     if !sdk_root.is_dir() {
                         return Err(Error::SdkRootInvalid { sdk_root });

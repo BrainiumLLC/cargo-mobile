@@ -98,8 +98,6 @@ pub fn gen(
             map.insert("ios-frameworks", metadata.ios().frameworks());
             map.insert("macos-libraries", metadata.ios().libraries());
             map.insert("macos-frameworks", metadata.macos().frameworks());
-            map.insert("ios-dir-exists", config.ios_dir_exists());
-            map.insert("macos-dir-exists", config.macos_dir_exists());
         },
         filter.fun(),
     )
