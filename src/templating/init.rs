@@ -201,7 +201,6 @@ pub fn init(config: Option<&Config>) -> Bicycle {
             if let Some(config) = config {
                 map.insert(app::KEY, config.app());
                 map.insert("author", detect_author());
-                map.insert("home", "~");
                 #[cfg(target_os = "macos")]
                 map.insert(crate::apple::NAME, config.apple());
                 map.insert(crate::android::NAME, config.android());
