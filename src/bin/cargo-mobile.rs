@@ -72,6 +72,8 @@ pub enum Command {
     },
     #[structopt(name = "open", about = "Open project in default code editor")]
     Open,
+    #[structopt(name = "project_update", about = "Update `cargo-mobile`")]
+    ProjectUpdate,
     #[structopt(name = "update", about = "Update `cargo-mobile`")]
     Update {
         #[structopt(long = "init", help = "Regenerate project if update succeeds")]
@@ -199,6 +201,20 @@ impl Exec for Input {
                 .map_err(Error::InitFailed)
             }
             Command::Open => util::open_in_editor(".").map_err(Error::OpenFailed),
+            Command::ProjectUpdate => {
+                init::exec(
+                    wrapper,
+                    non_interactive,
+                    Default::default(),
+                    Default::default(),
+                    Default::default(),
+                    Default::default(),
+                    ".",
+                    false,
+                )
+                .map_err(Error::InitFailed)?;
+                Ok(())
+            }
             Command::Update { init } => {
                 update::update(wrapper).map_err(Error::UpdateFailed)?;
                 if init {
