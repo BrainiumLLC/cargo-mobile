@@ -97,6 +97,7 @@ pub fn exec(
     open_in_editor: opts::OpenInEditor,
     submodule_commit: Option<String>,
     cwd: impl AsRef<Path>,
+    gen_projects: bool,
 ) -> Result<Config, Error> {
     let cwd = cwd.as_ref();
     let (config, config_origin) =
@@ -123,15 +124,17 @@ pub fn exec(
     let filter = templating::Filter::new(&config, config_origin, dot_first_init_exists)
         .map_err(Error::FilterConfigureFailed)?;
 
-    // Generate the base project
-    project::gen(
-        &config,
-        &bike,
-        &filter,
-        submodule_commit,
-        dot_first_init_exists,
-    )
-    .map_err(Error::ProjectInitFailed)?;
+    if gen_projects {
+        // Generate the base project
+        project::gen(
+            &config,
+            &bike,
+            &filter,
+            submodule_commit,
+            dot_first_init_exists,
+        )
+        .map_err(Error::ProjectInitFailed)?;
+    }
 
     let asset_dir = config.app().asset_dir();
     if !asset_dir.is_dir() {
@@ -168,56 +171,60 @@ pub fn exec(
 
     dot_cargo.set_env(config.env().clone());
 
-    let metadata = Metadata::load(&config.app().root_dir()).map_err(Error::MetadataFailed)?;
+    if gen_projects {
+        let metadata = Metadata::load(&config.app().root_dir()).map_err(Error::MetadataFailed)?;
 
-    // Generate Xcode project
-    #[cfg(target_os = "macos")]
-    if metadata.apple().supported() {
-        apple::project::gen(
-            config.apple(),
-            metadata.apple(),
-            config.app().template_pack().submodule_path(),
-            &bike,
-            wrapper,
-            non_interactive,
-            skip_dev_tools,
-            reinstall_deps,
-            &filter,
-        )
-        .map_err(Error::AppleInitFailed)?;
-    } else {
-        println!("Skipping iOS init, since it's marked as unsupported in your Cargo.toml metadata");
-    }
-
-    // Generate Android Studio project
-    if metadata.android().supported() {
-        match android::env::Env::new() {
-            Ok(env) => android::project::gen(
-                config.android(),
-                metadata.android(),
-                &env,
+        // Generate Xcode project
+        #[cfg(target_os = "macos")]
+        if metadata.apple().supported() {
+            apple::project::gen(
+                config.apple(),
+                metadata.apple(),
+                config.app().template_pack().submodule_path(),
                 &bike,
                 wrapper,
+                non_interactive,
+                skip_dev_tools,
+                reinstall_deps,
                 &filter,
-                &mut dot_cargo,
             )
-            .map_err(Error::AndroidInitFailed)?,
-            Err(err) => {
-                if err.sdk_or_ndk_issue() {
-                    Report::action_request(
+            .map_err(Error::AppleInitFailed)?;
+        } else {
+            println!(
+                "Skipping iOS init, since it's marked as unsupported in your Cargo.toml metadata"
+            );
+        }
+
+        // Generate Android Studio project
+        if metadata.android().supported() {
+            match android::env::Env::new() {
+                Ok(env) => android::project::gen(
+                    config.android(),
+                    metadata.android(),
+                    &env,
+                    &bike,
+                    wrapper,
+                    &filter,
+                    &mut dot_cargo,
+                )
+                .map_err(Error::AndroidInitFailed)?,
+                Err(err) => {
+                    if err.sdk_or_ndk_issue() {
+                        Report::action_request(
                         "Failed to initialize Android environment; Android support won't be usable until you fix the issue below and re-run `cargo mobile init`!",
                         err,
                     )
                     .print(wrapper);
-                } else {
-                    Err(Error::AndroidEnvFailed(err))?;
+                    } else {
+                        Err(Error::AndroidEnvFailed(err))?;
+                    }
                 }
             }
-        }
-    } else {
-        println!(
+        } else {
+            println!(
             "Skipping Android init, since it's marked as unsupported in your Cargo.toml metadata"
         );
+        }
     }
 
     dot_cargo

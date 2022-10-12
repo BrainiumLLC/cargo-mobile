@@ -166,6 +166,7 @@ impl Exec for Input {
                 open_in_editor,
                 submodule_commit,
                 ".",
+                true,
             )
             .map(|_| ())
             .map_err(Error::InitFailed),
@@ -192,6 +193,7 @@ impl Exec for Input {
                     open_in_editor,
                     submodule_commit,
                     ".",
+                    true,
                 )
                 .map(|_| ())
                 .map_err(Error::InitFailed)
@@ -208,6 +210,7 @@ impl Exec for Input {
                         Default::default(),
                         Default::default(),
                         ".",
+                        false,
                     )
                     .map_err(Error::InitFailed)?;
                 }
