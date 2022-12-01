@@ -7,7 +7,6 @@ use crate::{
     config::app::App,
     util::{self, cli::Report, VersionDoubleError, VersionTriple, VersionTripleError},
 };
-use bicycle::handlebars::Path;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{self, Display},

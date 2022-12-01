@@ -11,6 +11,7 @@ pub struct CargoCommand<'a> {
     no_default_features: bool,
     features: Option<&'a [String]>,
     release: bool,
+    lib: bool,
 }
 
 impl<'a> CargoCommand<'a> {
@@ -24,6 +25,7 @@ impl<'a> CargoCommand<'a> {
             no_default_features: Default::default(),
             features: Default::default(),
             release: Default::default(),
+            lib: Default::default(),
         }
     }
 
@@ -62,8 +64,16 @@ impl<'a> CargoCommand<'a> {
         self
     }
 
+    pub fn with_lib(mut self, lib: bool) -> Self {
+        self.lib = lib;
+        self
+    }
+
     fn into_command_inner(self, mut command: bossy::Command) -> bossy::Command {
         command.add_arg(self.subcommand);
+        if self.lib {
+            command.add_arg("--lib");
+        }
         if self.verbose {
             command.add_arg("-vv");
         }
