@@ -1,8 +1,13 @@
-use std::{io, fmt::{Display, self}, ffi::{OsString, OsStr}, path::{PathBuf, Path}};
+use std::{
+    ffi::{OsStr, OsString},
+    fmt::{self, Display},
+    io,
+    path::{Path, PathBuf},
+};
 
 use self::windows::{detect_type_editor, FileType};
 
-pub (super) mod info;
+pub(super) mod info;
 mod windows;
 
 #[derive(Debug)]
@@ -11,11 +16,13 @@ pub enum DetectEditorError {
     ExecFieldMissing,
 }
 
-
 impl Display for DetectEditorError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::NoDefaultEditorSet => write!(f, "No default editor is set: registry queries for \".rs\" and \".txt\" both failed"),
+            Self::NoDefaultEditorSet => write!(
+                f,
+                "No default editor is set: registry queries for \".rs\" and \".txt\" both failed"
+            ),
             Self::ExecFieldMissing => write!(f, "Exec field on desktop entry was not found"),
         }
     }
@@ -41,16 +48,17 @@ pub struct Application {
     exec_command: OsString,
 }
 
-
 impl Application {
     pub fn detect_editor() -> Result<Self, DetectEditorError> {
         if let Ok(command) = detect_type_editor(FileType::Rust) {
-            return Ok(Self{exec_command: command})
+            return Ok(Self {
+                exec_command: command,
+            });
         } else {
             return match detect_type_editor(FileType::Text) {
-                Ok(c) => Ok(Self{exec_command: c}),
-                Err(_) => Err(DetectEditorError::NoDefaultEditorSet)
-            }
+                Ok(c) => Ok(Self { exec_command: c }),
+                Err(_) => Err(DetectEditorError::NoDefaultEditorSet),
+            };
         }
     }
 
@@ -75,8 +83,8 @@ pub fn open_file_with(
     let command_parts = vec![application.to_os_string(), path.to_os_string()];
 
     bossy::Command::impure(&command_parts[0])
-            .with_args(&command_parts[1..])
-            .run_and_detach()
+        .with_args(&command_parts[1..])
+        .run_and_detach()
 }
 
 // We use "sh" in order to access "command -v", as that is a bultin command on sh.

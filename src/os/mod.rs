@@ -12,14 +12,11 @@ mod linux;
 #[cfg(target_os = "linux")]
 pub use self::linux::*;
 
-
 #[cfg(target_os = "windows")]
 mod windows;
 
 #[cfg(target_os = "windows")]
 pub use self::windows::*;
-
-
 
 // TODO: we should probably expose common functionality throughout `os` in a
 // less ad-hoc way... since it's really easy to accidentally break things.
