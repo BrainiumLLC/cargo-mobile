@@ -12,8 +12,14 @@ mod linux;
 #[cfg(target_os = "linux")]
 pub use self::linux::*;
 
-#[cfg(not(any(target_os = "macos", target_os = "linux")))]
-compile_error!("Host platform not yet supported by cargo-mobile! We'd love if you made a PR to add support for this platform ❤️");
+
+#[cfg(target_os = "windows")]
+mod windows;
+
+#[cfg(target_os = "windows")]
+pub use self::windows::*;
+
+
 
 // TODO: we should probably expose common functionality throughout `os` in a
 // less ad-hoc way... since it's really easy to accidentally break things.
